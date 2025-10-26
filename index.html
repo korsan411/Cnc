@@ -1,0 +1,158 @@
+<!doctype html>
+<!-- CncAi — Version 2.5.0 | Structured Build -->
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>CNC AI — CNC Router & Laser Engraving & 3D Printing</title>
+
+  <!-- مكتبات خارجية -->
+  <script src="https://docs.opencv.org/4.8.0/opencv.js" async></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+
+  <!-- ملفات المشروع -->
+  <link rel="stylesheet" href="style.css"/>
+</head>
+
+<body>
+  <div class="app">
+    <!-- ===== Header ===== -->
+    <header>
+      <h1>CNC AI — CNC Router & Laser Engraving & 3D Printing</h1>
+      <div id="cvState">
+        <span class="loading"></span>
+        <span class="version-string">CncAi — النسخة المستقرة 2.5.0</span>
+        جاري تحميل OpenCV...
+      </div>
+    </header>
+
+    <!-- ===== Main Layout ===== -->
+    <div class="grid">
+      <!-- Left Panel: Tabs and Previews -->
+      <div class="panel" id="leftPanel">
+
+        <!-- اختيار الصورة -->
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="fileInput" type="file" accept="image/*"/>
+          <label class="file-input-label" for="fileInput">📁 اختر صورة</label>
+          <div style="flex:1"></div>
+
+          <label for="edgeMode" style="font-weight:normal;color:#9bb0c8">Edge Mode:</label>
+          <select id="edgeMode" style="width:140px">
+            <option value="auto">Canny (عادي)</option>
+            <option value="sobel">Sobel (دقيق)</option>
+            <option value="laplace">Laplacian (ناعـم)</option>
+          </select>
+        </div>
+
+        <!-- حساسية الحواف -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <label style="margin:0;color:#9bb0c8">حساسية الحواف:</label>
+          <input id="edgeSensitivity" type="range" min="0.1" max="1.0" step="0.05" value="0.33" style="flex:1">
+          <div id="edgeValue" style="min-width:44px;text-align:center;color:#cfeaf2">0.33</div>
+        </div>
+
+        <!-- أزرار Colormap -->
+        <div class="colormap-section">
+          <div class="colormap-title">🎨 خيارات تدرج الألوان 🎨</div>
+          <div class="colormap-buttons" id="colormapButtons">
+            <button data-map="jet" class="active">Jet</button>
+            <button data-map="hot">Hot</button>
+            <button data-map="cool">Cool</button>
+            <button data-map="gray">Gray</button>
+          </div>
+          <div class="small-meta">تطبق على Heatmap وTop View والمعاينات الأخرى</div>
+        </div>
+
+        <!-- التبويبات -->
+        <div class="tab-buttons">
+          <button data-tab="original" class="active">🖼️ الأصلية</button>
+          <button data-tab="heatmap">🔥 Heatmap</button>
+          <button data-tab="contour">📐 Contours</button>
+          <button data-tab="topview">🔝 Top View</button>
+          <button data-tab="threed">🧊 3D Models</button>
+          <button data-tab="simulation">🎬 المحاكاة</button>
+        </div>
+
+        <!-- محتوى التبويبات -->
+        <div id="original" class="tab-content active">
+          <canvas id="canvasOriginal"></canvas>
+        </div>
+        <div id="heatmap" class="tab-content">
+          <canvas id="canvasHeatmap"></canvas>
+        </div>
+        <div id="contour" class="tab-content">
+          <canvas id="canvasContour"></canvas>
+        </div>
+        <div id="topview" class="tab-content">
+          <canvas id="topView"></canvas>
+          <div id="topLegend"></div>
+        </div>
+        <div id="threed" class="tab-content">
+          <div id="threeDContainer"><canvas id="canvas3D"></canvas></div>
+        </div>
+        <div id="simulation" class="tab-content">
+          <div id="threeContainer"></div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Machine Settings -->
+      <div class="panel" id="rightPanel">
+        <h3>⚙️ إعدادات الماكينة</h3>
+
+        <label for="machineCategory">نوع الماكينة</label>
+        <select id="machineCategory">
+          <option value="router">CNC Router</option>
+          <option value="laser">Laser Engraver</option>
+          <option value="threed">3D Printer</option>
+        </select>
+
+        <!-- Router Settings -->
+        <div id="routerSettings" class="machine-settings">
+          <h4>🔄 إعدادات CNC Router</h4>
+          <label for="feedRate">سرعة التغذية</label>
+          <input id="feedRate" type="number" value="800"/>
+          <label for="safeZ">ارتفاع الأمان</label>
+          <input id="safeZ" type="number" value="5"/>
+          <button id="btnGen" class="primary">⚡ توليد G-code</button>
+        </div>
+
+        <!-- Laser Settings -->
+        <div id="laserSettings" class="machine-settings" style="display:none;">
+          <h4>⚡ إعدادات Laser Engraver</h4>
+          <label for="laserPower">قوة الليزر (%)</label>
+          <input id="laserPower" type="range" min="0" max="100" value="80"/>
+          <label for="laserSpeed">سرعة الليزر (مم/دقيقة)</label>
+          <input id="laserSpeed" type="number" value="2000"/>
+          <button id="btnLaserEngrave" class="primary">توليد كود ليزر</button>
+        </div>
+
+        <!-- 3D Settings -->
+        <div id="threedSettings" class="machine-settings" style="display:none;">
+          <h4>🧊 إعدادات الطباعة ثلاثية الأبعاد</h4>
+          <label for="threedFileInput">تحميل ملف 3D</label>
+          <input id="threedFileInput" type="file" accept=".stl,.obj"/>
+          <button id="btnSliceModel" class="primary">⚡ توليد G-code (3D)</button>
+        </div>
+
+        <label for="gcodeOut">📄 مخرجات G-code</label>
+        <textarea id="gcodeOut" readonly placeholder="سيظهر G-code هنا بعد التوليد..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress & Debug Overlays -->
+  <div class="progress-overlay" id="progressOverlay">
+    <div class="progress-spinner"></div>
+    <div class="progress-text" id="progressText">جاري المعالجة...</div>
+  </div>
+  <div id="toast"></div>
+  <div id="debugOverlay"></div>
+
+  <!-- سكربت المشروع -->
+  <script src="script.js"></script>
+</body>
+</html>
