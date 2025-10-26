@@ -1,0 +1,89 @@
+
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CncAi — 2.5.0 CDN Edition</title>
+<link rel="stylesheet" href="style.css">
+<!-- CDN libraries (Three.js module + OpenCV async) -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"></script>
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+</head>
+<body>
+<header class="app-header">
+  <div class="brand"><h1>CncAi <small>2.5.0</small></h1></div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="original" class="active">الأصلية</button>
+    <button data-tab="heatmap">Heatmap</button>
+    <button data-tab="contour">Contours</button>
+    <button data-tab="topview">Top View</button>
+    <button data-tab="simulation">3D Simulation</button>
+  </nav>
+  <div class="header-actions">
+    <button id="theme-toggle" title="تبديل الثيم">🌓</button>
+    <button id="debug-toggle" title="عرض التصحيح">🐞</button>
+  </div>
+</header>
+
+<main id="main">
+  <section id="original" class="tab active">
+    <div class="controls">
+      <label class="btn">اختر صورة <input id="upload-image" type="file" accept="image/*" style="display:none"></label>
+      <button id="start-analysis" class="btn">ابدأ التحليل</button>
+    </div>
+    <div class="canvas-wrap"><canvas id="image-canvas"></canvas></div>
+  </section>
+
+  <section id="heatmap" class="tab">
+    <div class="controls">
+      <label>Colormap
+        <select id="colormap">
+          <option value="jet">Jet</option>
+          <option value="hot">Hot</option>
+          <option value="cool">Cool</option>
+          <option value="gray">Gray</option>
+        </select>
+      </label>
+      <label>حساسية
+        <input type="range" id="edge-sensitivity" min="0" max="255" value="100">
+      </label>
+    </div>
+    <div class="canvas-wrap"><canvas id="heatmap-canvas"></canvas></div>
+  </section>
+
+  <section id="contour" class="tab">
+    <div class="controls">
+      <label>Edge Mode
+        <select id="edge-mode">
+          <option value="canny">Canny</option>
+          <option value="sobel">Sobel</option>
+          <option value="laplacian">Laplacian</option>
+        </select>
+      </label>
+      <button id="generate-raster" class="btn">توليد G-code (Raster)</button>
+      <button id="generate-contour" class="btn">توليد G-code (Contour)</button>
+      <a id="download-gcode" style="display:none"></a>
+    </div>
+    <div class="canvas-wrap"><canvas id="contour-canvas"></canvas></div>
+  </section>
+
+  <section id="topview" class="tab">
+    <div class="controls">
+      <label>Invert Z <input type="checkbox" id="invert-z"></label>
+    </div>
+    <div class="canvas-wrap"><canvas id="topview-canvas"></canvas></div>
+    <div id="legend" class="legend"></div>
+  </section>
+
+  <section id="simulation" class="tab">
+    <div class="controls">
+      <button id="sim-play" class="btn">تشغيل المحاكاة</button>
+    </div>
+    <div id="simulation-container"></div>
+  </section>
+</main>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
