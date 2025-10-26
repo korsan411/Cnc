@@ -1,0 +1,1 @@
+export const MemoryManager = { releaseImage(img){ try{ URL.revokeObjectURL(img.src);}catch(e){} }, releaseCanvas(canvas){ try{ const ctx=canvas.getContext('2d'); ctx && ctx.clearRect(0,0,canvas.width,canvas.height);}catch(e){} } };
