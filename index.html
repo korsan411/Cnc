@@ -1,0 +1,318 @@
+<!doctype html>
+<!-- CncAi — Version 2.5.0 | All Improvements Batch | October 2025 -->
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>CNC AI — CNC Router & Laser Engraving & 3D Printing</title>
+
+  <!-- مكتبات أساسية -->
+  <script src="https://docs.opencv.org/4.8.0/opencv.js" async></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+  
+  <!-- مكتبات إضافية للمتجهات -->
+  <script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.170.0/examples/js/loaders/SVGLoader.js"></script>
+  <script src="https://unpkg.com/three@0.170.0/examples/js/loaders/DXFLoader.js"></script>
+
+  <!-- أنماط التطبيق -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>CNC AI — CNC Router & Laser Engraving & 3D Printing</h1>
+      <div id="cvState">
+        <span class="loading"></span>
+        <span class="version-string">CncAi — النسخة المستقرة 2.5.0</span>
+        جاري تحميل OpenCV...
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- اللوحة اليسرى - المعاينات والتحكم -->
+      <div class="panel">
+        <!-- تحميل الصورة -->
+        <div class="file-input-container">
+          <input id="fileInput" type="file" accept="image/*" style="display: none;"/>
+          <label class="file-input-label" for="fileInput">📁 اختر صورة</label>
+          <div class="spacer"></div>
+          <label for="edgeMode">وضع الحواف:</label>
+          <select id="edgeMode">
+            <option value="auto">Canny (عادي)</option>
+            <option value="sobel">Sobel (دقيق)</option>
+            <option value="laplace">Laplacian (ناعم)</option>
+          </select>
+        </div>
+
+        <!-- تحكم حساسية الحواف -->
+        <div class="sensitivity-control">
+          <label>حساسية الحواف:</label>
+          <input id="edgeSensitivity" type="range" min="0.1" max="1.0" step="0.05" value="0.33">
+          <div id="edgeValue">0.33</div>
+        </div>
+
+        <!-- قسم ملفات STL و SVG و DXF -->
+        <div class="file-format-section">
+          <div class="file-format-title">
+            <span>📁</span>
+            تحميل ملفات STL و SVG و DXF
+            <span>📁</span>
+          </div>
+          <div class="file-format-buttons" id="fileFormatButtons">
+            <!-- سيتم تعبئتها بواسطة JavaScript -->
+          </div>
+          <div class="small-meta">
+            يمكن تحميل ملفات STL للطباعة ثلاثية الأبعاد، وملفات SVG/DXF للتحويل إلى G-code
+          </div>
+        </div>
+
+        <!-- أزرار تدرج الألوان -->
+        <div class="colormap-section">
+          <div class="colormap-title">
+            <span>🎨</span>
+            خيارات تدرج الألوان
+            <span>🎨</span>
+          </div>
+          <div class="colormap-buttons" id="colormapButtons">
+            <!-- سيتم تعبئتها بواسطة JavaScript -->
+          </div>
+          <div class="small-meta">
+            التغيير يطبق على: Heatmap • Top View • Contours • كل المعاينات
+          </div>
+        </div>
+
+        <!-- أزرار التبويبات -->
+        <div class="tab-buttons" role="tablist">
+          <button data-tab="original" class="active">🖼️ الأصلية</button>
+          <button data-tab="heatmap">🔥 Heatmap</button>
+          <button data-tab="contour">📐 Contours</button>
+          <button data-tab="topview">🔝 Top View</button>
+          <button data-tab="threed">🧊 3D Models</button>
+          <button data-tab="simulation">🎬 المحاكاة</button>
+          <button data-tab="vector2d">📐 2D Vector</button>
+          <button data-tab="ai-analysis">🧠 التحليل الذكي</button>
+        </div>
+
+        <!-- محتويات التبويبات -->
+        <div id="original" class="tab-content active">
+          <div class="canvas-placeholder" id="originalPlaceholder">الصورة الأصلية ستظهر هنا</div>
+          <canvas id="canvasOriginal" style="display:none;"></canvas>
+        </div>
+
+        <div id="heatmap" class="tab-content">
+          <div class="canvas-placeholder" id="heatmapPlaceholder">Heatmap ستظهر هنا</div>
+          <canvas id="canvasHeatmap" style="display:none;"></canvas>
+        </div>
+
+        <div id="contour" class="tab-content">
+          <div class="canvas-placeholder" id="contourPlaceholder">Contours ستظهر هنا</div>
+          <canvas id="canvasContour" style="display:none;"></canvas>
+          <div class="small-meta">تبديل وضع كشف الحواف أو تحريك حساسية الحواف يحدث إعادة معالجة تلقائية</div>
+        </div>
+
+        <div id="topview" class="tab-content">
+          <div id="topViewContainer">
+            <canvas id="topView"></canvas>
+            <div id="topLegend" title="عمق النقش — الألوان فقط"></div>
+          </div>
+          <div class="small-meta">معاينة من الأعلى للعمق المتوقع بعد تنفيذ G-code (الألوان تتبع اختيار Colormap)</div>
+        </div>
+
+        <div id="threed" class="tab-content">
+          <div class="canvas-placeholder" id="threedPlaceholder">الموديل ثلاثي الأبعاد سيظهر هنا</div>
+          <div id="threeDContainer" style="display:none;">
+            <canvas id="canvas3D"></canvas>
+          </div>
+        </div>
+
+        <div id="simulation" class="tab-content">
+          <div id="threeContainer">
+            <div class="canvas-placeholder" id="simulationPlaceholder">المحاكاة ستظهر هنا بعد توليد G-code</div>
+          </div>
+        </div>
+
+        <div id="vector2d" class="tab-content">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="canvas-placeholder" id="vectorPlaceholder">اسحب أو ارفع ملف SVG أو DXF هنا للمعاينة</div>
+            <canvas id="vectorCanvas" style="display:none;width:100%;height:420px;background:transparent;"></canvas>
+            <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+              <button id="vectorZoomIn" class="secondary">🔍+</button>
+              <button id="vectorZoomOut" class="secondary">🔍−</button>
+              <button id="vectorFit" class="secondary">🎯 ملء الشاشة</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="ai-analysis" class="tab-content">
+          <h2>🧠 تحليل الصورة المتقدم</h2>
+          <p>تحليل شامل للسطوع، التباين، الحدة، الملمس، كثافة الحواف وتوصيات الماكينة.</p>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button id="runAiAnalysis" class="action-btn">بدء التحليل</button>
+            <button id="aiApplyToMachine" class="action-btn" style="display:none">تطبيق التوصيات</button>
+            <button id="aiCopyResult" class="action-btn" style="display:none">نسخ النتائج</button>
+            <span id="aiStatus" style="margin-inline-start:8px;color:#9fb6c3"></span>
+          </div>
+          <div id="aiTableWrap" style="margin-top:12px;">
+            <table id="aiResultTable" style="width:100%;border-collapse:collapse;text-align:right">
+              <thead>
+                <tr style="text-align:right">
+                  <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.04)">المؤشر</th>
+                  <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.04)">القيمة</th>
+                  <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.04)">ملاحظة</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <img id="aiPreviewImage" class="preview-img" style="display:none;margin-top:12px" alt="صورة مصغرة"/>
+        </div>
+      </div>
+
+      <!-- اللوحة اليمنى - إعدادات الماكينة -->
+      <div class="panel">
+        <h3>⚙️ إعدادات الماكينة</h3>
+
+        <!-- الإعدادات المتقدمة للماكينة -->
+        <div id="adv-machine-card">
+          <div id="adv-machine-toggle" aria-expanded="false">
+            <div class="adv-title">⚙️ الإعدادات المتقدمة للماكينة</div>
+            <div id="adv-arrow">▼</div>
+          </div>
+          <div id="adv-machine-body" role="region" aria-hidden="true">
+            <!-- سيتم تعبئتها بواسطة JavaScript -->
+          </div>
+        </div>
+
+        <!-- اختيار نوع الماكينة -->
+        <label for="machineCategory">نوع الماكينة الرئيسي</label>
+        <select id="machineCategory">
+          <option value="router">CNC Router (نحت خشب)</option>
+          <option value="laser">Laser Engraver (نقش ليزر)</option>
+          <option value="threed">3D Printer (طباعة ثلاثية الأبعاد)</option>
+        </select>
+
+        <!-- إعدادات CNC Router -->
+        <div id="routerSettings" class="machine-settings">
+          <!-- سيتم تعبئتها بواسطة JavaScript -->
+        </div>
+
+        <!-- إعدادات Laser Engraver -->
+        <div id="laserSettings" class="machine-settings" style="display:none;">
+          <!-- سيتم تعبئتها بواسطة JavaScript -->
+        </div>
+
+        <!-- إعدادات 3D Printer -->
+        <div id="threedSettings" class="machine-settings" style="display:none;">
+          <!-- سيتم تعبئتها بواسطة JavaScript -->
+        </div>
+
+        <!-- الوقت المقدر -->
+        <div id="estTime" style="margin-top:12px;color:#9bb0c8;text-align:center;padding:8px;background:#0f172a;border-radius:6px">
+          ⏱️ الوقت المقدر: -- دقيقة
+        </div>
+
+        <!-- مخرجات G-code -->
+        <label for="gcodeOut" style="margin-top:12px">📄 مخرجات G-code</label>
+        <textarea id="gcodeOut" readonly placeholder="سيظهر G-code هنا بعد التوليد..." style="height:180px;background:#021024;color:#cfeaf2;border-radius:8px;padding:10px;"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة التقدم -->
+  <div class="progress-overlay" id="progressOverlay">
+    <div class="progress-spinner"></div>
+    <div class="progress-text" id="progressText">جاري المعالجة...</div>
+  </div>
+
+  <!-- نافذة التصحيح -->
+  <div id="debugOverlay" class="minimized">
+    <div id="debugHeader">
+      <div style="display:flex;align-items:center;gap:8px">
+        <b>🐞 CncAi Debug</b>
+        <small id="debugSummary">0 سجلات</small>
+      </div>
+      <div id="debugControls">
+        <button id="dbgToggleSize" class="dbg-btn" title="تكبير/تصغير">🔽</button>
+        <button id="dbgClear" class="dbg-btn" title="مسح السجلات">🧹</button>
+        <button id="dbgCopy" class="dbg-btn" title="نسخ السجلات">📋</button>
+        <button id="dbgClose" class="dbg-btn" title="إخفاء">❌</button>
+      </div>
+    </div>
+    <div id="debugTopbar">
+      <div style="padding:6px 10px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.03);display:flex;gap:6px;align-items:center">
+        <button id="dbgToggleSizeTop" class="dbg-btn" style="font-size:11px">🔽 حجم</button>
+        <button id="dbgHideTop" class="dbg-btn" style="font-size:11px">👁️ إخفاء</button>
+        <button id="dbgResetTop" class="dbg-btn" style="font-size:11px">🔄 إعادة تعيين</button>
+        <div style="flex:1"></div>
+        <small style="color:#9bb0c8">انقر التصغير لحفظ الشاشة</small>
+      </div>
+    </div>
+    <div id="debugList"></div>
+    <div id="debugFooter">
+      <div style="flex:1"></div>
+      <div style="font-size:12px;color:#9bb0c8">CncAi 2.5.0</div>
+    </div>
+  </div>
+
+  <!-- الإشعارات -->
+  <div id="toast"></div>
+
+  <!-- تحميل ملفات JavaScript -->
+  <script src="config.js"></script>
+  <script src="utils.js"></script>
+  <script src="memory-manager.js"></script>
+  <script src="task-manager.js"></script>
+  <script src="input-validator.js"></script>
+  <script src="opencv-handler.js"></script>
+  <script src="ui-manager.js"></script>
+  <script src="file-handler.js"></script>
+  <script src="colormap-manager.js"></script>
+  <script src="edge-detector.js"></script>
+  <script src="gcode-generator.js"></script>
+  <script src="3d-viewer.js"></script>
+  <script src="simulation.js"></script>
+  <script src="vector-preview.js"></script>
+  <script src="ai-analyzer.js"></script>
+  <script src="debug-system.js"></script>
+  <script src="advanced-machine.js"></script>
+  <script src="gcode-library.js"></script>
+  <script src="main.js"></script>
+
+  <!-- تهيئة إضافية للمكونات -->
+  <script>
+    // تهيئة إضافية للمكونات بعد تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+      // تهيئة نظام النسبة المتقدمة
+      setTimeout(function() {
+        if (typeof initAdvancedAspectRatio === 'function') {
+          initAdvancedAspectRatio();
+        }
+      }, 1000);
+
+      // تهيئة معاينة 3D إذا كانت النافذة نشطة
+      if (document.getElementById('threed') && document.getElementById('threed').classList.contains('active')) {
+        setTimeout(function() {
+          if (typeof initThreeDViewer === 'function') {
+            initThreeDViewer();
+          }
+        }, 500);
+      }
+    });
+
+    // معالجة تحميل المكتبات بشكل آمن
+    window.addEventListener('error', function(e) {
+      if (e.filename && e.filename.includes('opencv.js')) {
+        console.error('فشل تحميل OpenCV');
+        const cvState = document.getElementById('cvState');
+        if (cvState) {
+          cvState.innerHTML = '❌ فشل تحميل OpenCV - تأكد من الاتصال بالإنترنت';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
