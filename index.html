@@ -1,152 +1,0 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>CNC AI — CNC Router & Laser Engraving & 3D Printing</title>
-  
-  <!-- مكتبات -->
-  <script src="https://docs.opencv.org/4.8.0/opencv.js" async></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-  <script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.170.0/examples/js/loaders/SVGLoader.js"></script>
-  <script src="https://unpkg.com/three@0.170.0/examples/js/loaders/DXFLoader.js"></script>
-
-  <!-- CSS -->
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="app">
-    <header>
-      <h1>CNC AI — CNC Router & Laser Engraving & 3D Printing</h1>
-      <div id="cvState">
-        <span class="loading"></span>
-        <span class="version-string">CncAi — النسخة المستقرة 2.2d</span>
-        جاري تحميل OpenCV...
-      </div>
-    </header>
-
-    <div class="grid">
-      <!-- LEFT panel -->
-      <div class="panel">
-        <div class="file-input-container">
-          <input id="fileInput" type="file" accept="image/*"/>
-          <label class="file-input-label" for="fileInput">📁 اختر صورة</label>
-          <div class="spacer"></div>
-          <label for="edgeMode">Edge Mode:</label>
-          <select id="edgeMode">
-            <option value="auto">Canny (عادي)</option>
-            <option value="sobel">Sobel (دقيق)</option>
-            <option value="laplace">Laplacian (ناعـم)</option>
-          </select>
-        </div>
-
-        <!-- Edge sensitivity slider -->
-        <div class="sensitivity-control">
-          <label>حساسية الحواف:</label>
-          <input id="edgeSensitivity" type="range" min="0.1" max="1.0" step="0.05" value="0.33">
-          <div id="edgeValue">0.33</div>
-        </div>
-
-        <!-- قسم ملفات STL و SVG و DXF -->
-        <div class="file-format-section">
-          <div class="file-format-title">
-            <span>📁</span>
-            تحميل ملفات STL و SVG و DXF
-            <span>📁</span>
-          </div>
-          <div class="file-format-buttons" id="fileFormatButtons">
-            <!-- Buttons will be populated by JavaScript -->
-          </div>
-          <div class="small-meta">
-            يمكن تحميل ملفات STL للطباعة ثلاثية الأبعاد، وملفات SVG/DXF للتحويل إلى G-code
-          </div>
-        </div>
-
-        <!-- أزرار الـ Colormap الثابتة -->
-        <div class="colormap-section">
-          <div class="colormap-title">
-            <span>🎨</span>
-            خيارات تدرج الألوان
-            <span>🎨</span>
-          </div>
-          <div class="colormap-buttons" id="colormapButtons">
-            <!-- Buttons will be populated by JavaScript -->
-          </div>
-          <div class="small-meta">
-            التغيير يطبق على: Heatmap • Top View • Contours • كل المعاينات
-          </div>
-        </div>
-
-        <div class="tab-buttons" role="tablist">
-          <button data-tab="original" class="active">🖼️ الأصلية</button>
-          <button data-tab="heatmap">🔥 Heatmap</button>
-          <button data-tab="contour">📐 Contours</button>
-          <button data-tab="topview">🔝 Top View</button>
-          <button data-tab="threed">🧊 3D Models</button>
-          <button data-tab="simulation">🎬 المحاكاة</button>
-          <button data-tab="vector2d">📐 2D Vector Preview</button>
-          <button data-tab="ai-analysis">🧠 تحليل الصورة</button>
-        </div>
-
-        <!-- Tab contents will be populated by JavaScript -->
-      </div>
-
-      <!-- RIGHT panel -->
-      <div class="panel">
-        <h3>⚙️ إعدادات الماكينة</h3>
-
-        <!-- Advanced Machine Settings -->
-        <div id="adv-machine-card">
-          <div id="adv-machine-toggle" aria-expanded="false">
-            <div class="adv-title">⚙️ الإعدادات المتقدمة للماكينة</div>
-            <div id="adv-arrow">▼</div>
-          </div>
-          <div id="adv-machine-body" role="region" aria-hidden="true">
-            <!-- Advanced settings will be populated by JavaScript -->
-          </div>
-        </div>
-
-        <!-- Machine settings will be populated by JavaScript -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Progress Overlay -->
-  <div class="progress-overlay" id="progressOverlay">
-    <div class="progress-spinner"></div>
-    <div class="progress-text" id="progressText">جاري المعالجة...</div>
-  </div>
-
-  <!-- Debug Overlay -->
-  <div id="debugOverlay" class="minimized">
-    <!-- Debug content will be populated by JavaScript -->
-  </div>
-
-  <div id="toast"></div>
-
-  <!-- JavaScript Files -->
-  <script src="config.js"></script>
-  <script src="utils.js"></script>
-  <script src="memory-manager.js"></script>
-  <script src="task-manager.js"></script>
-  <script src="input-validator.js"></script>
-  <script src="opencv-handler.js"></script>
-  <script src="ui-manager.js"></script>
-  <script src="file-handler.js"></script>
-  <script src="colormap-manager.js"></script>
-  <script src="edge-detector.js"></script>
-  <script src="gcode-generator.js"></script>
-  <script src="3d-viewer.js"></script>
-  <script src="simulation.js"></script>
-  <script src="vector-preview.js"></script>
-  <script src="ai-analyzer.js"></script>
-  <script src="debug-system.js"></script>
-  <script src="advanced-machine.js"></script>
-  <script src="gcode-library.js"></script>
-  <script src="main.js"></script>
-</body>
-</html>
