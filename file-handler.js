@@ -204,20 +204,22 @@ toggleClearButton(show) {
             throw error;
         }
     }
+/**
+ * Show image preview
+ */
+showImagePreview() {
+    // Show original tab canvas
+    showElement('canvasOriginal', 'originalPlaceholder');
 
-    /**
-     * Show image preview
-     */
-    showImagePreview() {
-        // Show original tab canvas
-        showElement('canvasOriginal', 'originalPlaceholder');
+    // Show clear button
+    this.toggleClearButton(true);
 
-        // Switch to original tab
-        this.switchToOriginalTab();
+    // Switch to original tab
+    this.switchToOriginalTab();
 
-        // Update tab button to indicate image is loaded
-        this.updateTabIndicators();
-    }
+    // Update tab button to indicate image is loaded
+    this.updateTabIndicators();
+}
 
     /**
      * Switch to original image tab
@@ -314,30 +316,34 @@ toggleClearButton(show) {
                this.previewCanvas.width > 0 && 
                this.previewCanvas.height > 0;
     }
-
-    /**
-     * Clear current image
-     */
-    clearImage() {
-        if (this.previewCanvas) {
-            const ctx = this.previewCanvas.getContext('2d');
-            ctx.clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
-        }
-        
-        this.previewCanvas = null;
-        this.currentFile = null;
-        APP_STATE.previewCanvas = null;
-
-        // Hide canvas and show placeholder
-        hideElement('canvasOriginal');
-        const placeholder = document.getElementById('originalPlaceholder');
-        if (placeholder) {
-            placeholder.style.display = 'flex';
-        }
-
-        // Reset tab indicators
-        this.updateTabIndicators();
+/**
+ * Clear current image
+ */
+clearImage() {
+    if (this.previewCanvas) {
+        const ctx = this.previewCanvas.getContext('2d');
+        ctx.clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
     }
+    
+    this.previewCanvas = null;
+    this.currentFile = null;
+    APP_STATE.previewCanvas = null;
+
+    // Hide canvas and show placeholder
+    hideElement('canvasOriginal');
+    const placeholder = document.getElementById('originalPlaceholder');
+    if (placeholder) {
+        placeholder.style.display = 'flex';
+    }
+
+    // Hide clear button
+    this.toggleClearButton(false);
+
+    // Reset tab indicators
+    this.updateTabIndicators();
+
+    showToast('تم مسح الصورة', 1500);
+}
 
     /**
      * Get image dimensions
