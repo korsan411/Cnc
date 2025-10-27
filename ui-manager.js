@@ -537,6 +537,36 @@ open3DFileDialog(format) {
     input.click();
 }
 
+/**
+ * Initialize control elements and event listeners
+ */
+initControlElements() {
+    try {
+        // Initialize dimension listeners
+        if (typeof initDimensionListeners === 'function') {
+            initDimensionListeners();
+        }
+        
+        // Initialize 3D file handling
+        this.init3DFileHandling();
+        
+        // Add event listeners for machine category changes
+        const machineCategory = document.getElementById('machineCategory');
+        if (machineCategory) {
+            machineCategory.addEventListener('change', (e) => {
+                this.handleMachineCategoryChange(e.target.value);
+            });
+        }
+        
+        console.log('✅ تم تهيئة عناصر التحكم');
+    } catch (error) {
+        console.error('❌ فشل تهيئة عناصر التحكم:', error);
+    }
+}
+
+
+
+
 
 
 
