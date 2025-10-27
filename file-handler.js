@@ -4,7 +4,15 @@ class FileHandler {
         this.currentFile = null;
         this.previewCanvas = null;
     }
-
+/**
+ * Show/hide clear image button
+ */
+toggleClearButton(show) {
+    const clearBtn = document.getElementById('btnClearImage');
+    if (clearBtn) {
+        clearBtn.style.display = show ? 'block' : 'none';
+    }
+}
     /**
      * Initialize file input handling
      */
