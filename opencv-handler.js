@@ -1,110 +1,191 @@
-/**
- * OpenCV initialization and readiness handler
- */
+// OpenCV Handler with improved loading and error handling
 class OpenCVHandler {
     constructor() {
         this.isReady = false;
-        this.loadAttempts = 0;
-        this.maxAttempts = 10;
-        this.loadCallbacks = [];
+        this.loading = false;
+        this.retryCount = 0;
+        this.maxRetries = 3;
     }
 
     /**
-     * Initialize OpenCV and wait for it to be ready
+     * Initialize OpenCV with proper error handling
      */
-    async init() {
-        return new Promise((resolve, reject) => {
-            if (this.isReady) {
-                resolve();
-                return;
-            }
-
-            const checkOpenCV = () => {
-                this.loadAttempts++;
-                
-                try {
-                    if (typeof cv !== 'undefined' && this.testOpenCV()) {
-                        this.isReady = true;
-                        APP_STATE.cvReady = true;
-                        this.onReady();
-                        resolve();
-                        return;
-                    }
-                } catch (error) {
-                    console.warn(`محاولة تحميل OpenCV ${this.loadAttempts} فشلت:`, error);
-                }
-
-                if (this.loadAttempts >= this.maxAttempts) {
-                    reject(new Error('فشل تحميل OpenCV بعد عدة محاولات'));
-                    return;
-                }
-
-                setTimeout(checkOpenCV, 500);
-            };
-
-            // Start checking
-            setTimeout(checkOpenCV, 1000);
-        });
-    }
-
-    /**
-     * Test if OpenCV is fully functional
-     */
-    testOpenCV() {
-        try {
-            // Test basic OpenCV functionality
-            if (!cv.getBuildInformation && !cv.imread && !cv.Mat) {
-                return false;
-            }
-
-            // Test matrix operations
-            const testMat = new cv.Mat();
-            if (!testMat || typeof testMat.delete !== 'function') {
-                return false;
-            }
-            
-            // Test if we can create and delete a matrix
-            testMat.delete();
-            
+    async initOpenCV() {
+        if (this.isReady) {
+            console.log('OpenCV is already ready');
             return true;
+        }
+
+        if (this.loading) {
+            console.log('OpenCV is already loading...');
+            await this.waitForOpenCV();
+            return this.isReady;
+        }
+
+        this.loading = true;
+        this.updateCVState('جاري تحميل OpenCV...');
+
+        try {
+            // Check if OpenCV is already loaded
+            if (typeof cv !== 'undefined' && cv.getBuildInformation) {
+                console.log('OpenCV already loaded');
+                this.isReady = true;
+                this.loading = false;
+                this.updateCVState('✅ OpenCV جاهز');
+                return true;
+            }
+
+            // Wait for OpenCV script to load
+            await this.loadOpenCVScript();
+            
+            // Wait for OpenCV to initialize
+            await this.waitForOpenCVInit();
+            
+            this.isReady = true;
+            this.loading = false;
+            this.updateCVState('✅ OpenCV جاهز');
+            showToast('تم تحميل OpenCV بنجاح', 1400);
+            
+            console.log('OpenCV loaded successfully');
+            return true;
+
         } catch (error) {
+            console.error('Failed to load OpenCV:', error);
+            this.loading = false;
+            this.handleOpenCVError(error);
             return false;
         }
     }
 
     /**
-     * Called when OpenCV is ready
+     * Load OpenCV script dynamically
      */
-    onReady() {
-        // Update UI
-        const cvState = document.getElementById('cvState');
-        if (cvState) {
-            cvState.innerHTML = '✅ OpenCV جاهز';
-        }
-        
-        showToast('تم تحميل OpenCV بنجاح', 1400);
-        console.log('OpenCV loaded successfully');
-
-        // Execute any pending callbacks
-        this.loadCallbacks.forEach(callback => {
-            try {
-                callback();
-            } catch (error) {
-                console.error('خطأ في معالج استدعاء OpenCV:', error);
+    async loadOpenCVScript() {
+        return new Promise((resolve, reject) => {
+            // Check if script is already loaded
+            if (document.querySelector('script[src*="opencv.js"]')) {
+                console.log('OpenCV script already exists');
+                resolve();
+                return;
             }
+
+            const script = document.createElement('script');
+            script.src = CONFIG.opencvUrl;
+            script.async = true;
+            
+            script.onload = () => {
+                console.log('OpenCV script loaded successfully');
+                resolve();
+            };
+            
+            script.onerror = (error) => {
+                console.error('Failed to load OpenCV script:', error);
+                reject(new Error('فشل تحميل ملف OpenCV'));
+            };
+            
+            // Add to document
+            document.head.appendChild(script);
+            
+            // Timeout after 30 seconds
+            setTimeout(() => {
+                if (!this.isReady) {
+                    reject(new Error('انتهى وقت تحميل OpenCV'));
+                }
+            }, 30000);
         });
-        
-        this.loadCallbacks = [];
     }
 
     /**
-     * Register callback for when OpenCV is ready
+     * Wait for OpenCV to initialize
      */
-    onLoad(callback) {
-        if (this.isReady) {
-            callback();
+    async waitForOpenCVInit() {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            const timeout = 30000; // 30 seconds
+            
+            const checkInterval = setInterval(() => {
+                try {
+                    // Multiple checks for OpenCV readiness
+                    if (typeof cv !== 'undefined' && 
+                        (cv.getBuildInformation || cv.imread || cv.Mat)) {
+                        
+                        // Additional test to ensure it's working
+                        const testMat = new cv.Mat();
+                        if (testMat && typeof testMat.delete === 'function') {
+                            testMat.delete();
+                            clearInterval(checkInterval);
+                            resolve();
+                            return;
+                        }
+                    }
+                    
+                    // Timeout check
+                    if (Date.now() - startTime > timeout) {
+                        clearInterval(checkInterval);
+                        reject(new Error('انتهى وقت تهيئة OpenCV'));
+                    }
+                } catch (error) {
+                    // Continue waiting if error occurs during test
+                    console.warn('OpenCV test failed, continuing to wait...');
+                }
+            }, 100);
+        });
+    }
+
+    /**
+     * Wait for OpenCV if it's loading
+     */
+    async waitForOpenCV() {
+        return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+                if (this.isReady || !this.loading) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+
+    /**
+     * Handle OpenCV loading errors
+     */
+    handleOpenCVError(error) {
+        this.retryCount++;
+        
+        if (this.retryCount <= this.maxRetries) {
+            console.log(`Retrying OpenCV load (${this.retryCount}/${this.maxRetries})...`);
+            this.updateCVState(`إعادة تحميل OpenCV (${this.retryCount}/${this.maxRetries})...`);
+            
+            setTimeout(() => {
+                this.initOpenCV();
+            }, 2000 * this.retryCount);
         } else {
-            this.loadCallbacks.push(callback);
+            console.error('Max retries exceeded for OpenCV load');
+            this.updateCVState('❌ فشل تحميل OpenCV');
+            showToast('فشل تحميل OpenCV. تأكد من الاتصال بالإنترنت', 5000);
+        }
+    }
+
+    /**
+     * Update OpenCV status display
+     */
+    updateCVState(message) {
+        try {
+            const cvState = document.getElementById('cvState');
+            if (cvState) {
+                if (message.includes('جاهز') || message.includes('✅')) {
+                    cvState.innerHTML = '✅ OpenCV جاهز';
+                } else if (message.includes('فشل') || message.includes('❌')) {
+                    cvState.innerHTML = '❌ فشل تحميل OpenCV';
+                } else {
+                    cvState.innerHTML = `
+                        <span class="loading" style="display:inline-block;width:16px;height:16px;border:3px solid #f3f3f3;border-top:3px solid #06b6d4;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;"></span>
+                        ${message}
+                    `;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to update CV state:', error);
         }
     }
 
@@ -116,139 +197,87 @@ class OpenCVHandler {
     }
 
     /**
-     * Safe image reading with error handling
+     * Safe OpenCV operation with error handling
      */
-    imreadSafe(canvas, name = 'image') {
+    async safeCVOperation(operation, operationName = 'OpenCV operation') {
+        if (!this.isReady) {
+            await this.initOpenCV();
+        }
+
+        if (!this.isReady) {
+            throw new Error('OpenCV غير جاهز');
+        }
+
         try {
-            if (!this.isReady) {
-                throw new Error('OpenCV غير جاهز');
-            }
-
-            if (!canvas || canvas.width === 0 || canvas.height === 0) {
-                throw new Error('الكانفاس غير صالح');
-            }
-
-            const mat = cv.imread(canvas);
-            memoryManager.track(mat, name);
-
-            if (mat.empty()) {
-                memoryManager.safeDelete(mat);
-                throw new Error('فشل قراءة الصورة');
-            }
-
-            return mat;
+            return await operation();
         } catch (error) {
-            console.error(`فشل في قراءة الصورة (${name}):`, error);
-            throw error;
+            console.error(`OpenCV operation failed (${operationName}):`, error);
+            throw new Error(`فشل في ${operationName}: ${error.message}`);
         }
     }
 
     /**
-     * Convert canvas to grayscale Mat
+     * Test OpenCV functionality
      */
-    canvasToGray(canvas) {
-        try {
-            const src = this.imreadSafe(canvas, 'src');
-            const gray = new cv.Mat();
-            
-            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-            memoryManager.track(gray, 'gray');
-            
-            memoryManager.safeDelete(src);
-            return gray;
-        } catch (error) {
-            console.error('فشل في تحويل الصورة إلى تدرج الرمادي:', error);
-            throw error;
+    testOpenCV() {
+        if (!this.isReady) {
+            return false;
         }
-    }
 
-    /**
-     * Apply Gaussian blur to Mat
-     */
-    gaussianBlur(mat, kernelSize = 5) {
         try {
-            const blurred = new cv.Mat();
-            const size = new cv.Size(kernelSize, kernelSize);
-            
-            cv.GaussianBlur(mat, blurred, size, 0);
-            memoryManager.track(blurred, 'blurred');
-            
-            return blurred;
-        } catch (error) {
-            console.error('فشل في تطبيق الضبابية:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Display Mat on canvas
-     */
-    imshow(canvasId, mat) {
-        try {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) {
-                throw new Error(`الكانفاس غير موجود: ${canvasId}`);
+            // Simple test to verify OpenCV is working
+            const mat = new cv.Mat();
+            if (mat && typeof mat.delete === 'function') {
+                mat.delete();
+                return true;
             }
-
-            canvas.width = mat.cols;
-            canvas.height = mat.rows;
-            
-            cv.imshow(canvasId, mat);
-            return true;
+            return false;
         } catch (error) {
-            console.error(`فشل في عرض الصورة على ${canvasId}:`, error);
+            console.error('OpenCV test failed:', error);
             return false;
         }
     }
 
     /**
-     * Get image statistics
+     * Load image using OpenCV
      */
-    getImageStats(mat) {
-        try {
-            const mean = new cv.Mat();
-            const stddev = new cv.Mat();
-            
-            cv.meanStdDev(mat, mean, stddev);
-            
-            const stats = {
-                mean: mean.data64F ? mean.data64F[0] : mean.data[0],
-                stddev: stddev.data64F ? stddev.data64F[0] : stddev.data[0],
-                min: null,
-                max: null
-            };
-            
-            memoryManager.safeDelete(mean);
-            memoryManager.safeDelete(stddev);
-            
-            return stats;
-        } catch (error) {
-            console.error('فشل في الحصول على إحصائيات الصورة:', error);
-            return { mean: 0, stddev: 0, min: 0, max: 0 };
-        }
+    loadImage(canvas) {
+        return this.safeCVOperation(() => {
+            if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                throw new Error('Canvas غير صالح');
+            }
+
+            const src = cv.imread(canvas);
+            if (src.empty()) {
+                src.delete();
+                throw new Error('فشل تحميل الصورة في OpenCV');
+            }
+
+            return src;
+        }, 'تحميل الصورة');
+    }
+
+    /**
+     * Convert image to grayscale
+     */
+    convertToGrayscale(src) {
+        return this.safeCVOperation(() => {
+            const gray = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            return gray;
+        }, 'تحويل إلى تدرج رمادي');
     }
 }
 
 // Create global instance
-const opencvHandler = new OpenCVHandler();
+const openCVHandler = new OpenCVHandler();
 
-// Wait for OpenCV to be ready
-function waitForCv() {
-    return opencvHandler.init();
+// Global OpenCV ready check
+function waitForOpenCV() {
+    return openCVHandler.initOpenCV();
 }
-
-// Add error handler for OpenCV loading
-window.addEventListener('error', function(e) {
-    if (e.filename && e.filename.includes('opencv.js')) {
-        const cvState = document.getElementById('cvState');
-        if (cvState) {
-            cvState.innerHTML = '❌ فشل تحميل OpenCV';
-        }
-        showToast('فشل في تحميل OpenCV. تأكد من الاتصال بالإنترنت', 5000);
-    }
-});
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { OpenCVHandler, opencvHandler, waitForCv };
+    module.exports = { OpenCVHandler, openCVHandler, waitForOpenCV };
 }
