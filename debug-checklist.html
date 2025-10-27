@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تصحيح تطبيق CNC AI</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+            color: #333; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .step { 
+            background: #e8f4fd; 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+            border-right: 4px solid #2196F3; 
+        }
+        .error { 
+            background: #ffebee; 
+            border-right: 4px solid #f44336; 
+        }
+        .success { 
+            background: #e8f5e8; 
+            border-right: 4px solid #4CAF50; 
+        }
+        code { 
+            background: #f1f1f1; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: monospace; 
+        }
+        button { 
+            background: #2196F3; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 تصحيح تطبيق CNC AI</h1>
+        <p>اتبع هذه الخطوات لحل المشاكل الشائعة:</p>
+
+        <div class="step">
+            <h3>✅ الخطوة 1: تحقق من تحميل الملفات</h3>
+            <button onclick="checkFiles()">فحص الملفات</button>
+            <div id="fileCheckResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>🌐 الخطوة 2: تحقق من الاتصال بالإنترنت والمكتبات</h3>
+            <button onclick="checkLibraries()">فحص المكتبات</button>
+            <div id="libraryCheckResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>🐞 الخطوة 3: فتح وحدة التصحيح</h3>
+            <button onclick="openDebug()">فتح التصحيح</button>
+            <button onclick="checkConsole()">فحص الكونسول</button>
+        </div>
+
+        <div class="step">
+            <h3>🔧 الخطوة 4: حلول سريعة</h3>
+            <button onclick="clearCache()">مسح الذاكرة المؤقتة</button>
+            <button onclick="reloadPage()">إعادة تحميل الصفحة</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function checkFiles() {
+            const files = [
+                'index.html', 'styles.css', 'config.js', 'utils.js', 
+                'memory-manager.js', 'task-manager.js', 'main.js'
+            ];
+            let results = [];
+            
+            files.forEach(file => {
+                fetch(file)
+                    .then(response => {
+                        const status = response.status === 200 ? '✅' : '❌';
+                        results.push(`${status} ${file} - ${response.status}`);
+                    })
+                    .catch(error => {
+                        results.push(`❌ ${file} - خطأ في التحميل`);
+                    })
+                    .finally(() => {
+                        if (results.length === files.length) {
+                            document.getElementById('fileCheckResult').innerHTML = 
+                                '<pre>' + results.join('\n') + '</pre>';
+                        }
+                    });
+            });
+        }
+
+        function checkLibraries() {
+            const libraries = [
+                'https://docs.opencv.org/4.8.0/opencv.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+            ];
+            let results = [];
+            
+            libraries.forEach(lib => {
+                const script = document.createElement('script');
+                script.src = lib;
+                script.onload = () => {
+                    results.push(`✅ ${lib} - محمل`);
+                    updateLibraryResults(results, libraries.length);
+                };
+                script.onerror = () => {
+                    results.push(`❌ ${lib} - فشل التحميل`);
+                    updateLibraryResults(results, libraries.length);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        function updateLibraryResults(results, total) {
+            if (results.length === total) {
+                document.getElementById('libraryCheckResult').innerHTML = 
+                    '<pre>' + results.join('\n') + '</pre>';
+            }
+        }
+
+        function openDebug() {
+            // محاولة فتح نافذة التصحيح في التطبيق الرئيسي
+            if (window.opener && window.opener.debugSystem) {
+                window.opener.debugSystem.show();
+            } else {
+                // إذا فشل، افتح الكونسول
+                console.log('🔧 افتح أدوات المطور (F12) وراجع علامة Console');
+                alert('افتح أدوات المطور (F12) وراجع علامة Console للأخطاء');
+            }
+        }
+
+        function checkConsole() {
+            console.clear();
+            console.log('=== فحص تطبيق CNC AI ===');
+            console.log('1. ✅ الصفحة محملة');
+            console.log('2. 🔍 افحص الأخطاء في هذه القائمة');
+            console.log('3. 📁 تأكد من وجود جميع الملفات');
+            console.log('4. 🌐 تأكد من الاتصال بالإنترنت');
+        }
+
+        function clearCache() {
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                    });
+                    console.log('🗑️ تم مسح الذاكرة المؤقتة');
+                });
+            }
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log('✅ تم مسح التخزين المحلي');
+            alert('تم مسح الذاكرة المؤقتة، أعد تحميل الصفحة');
+        }
+
+        function reloadPage() {
+            location.reload(true);
+        }
+    </script>
+</body>
+</html>
