@@ -1,184 +1,80 @@
-/**
- * UI Manager for dynamic element creation and management
- */
+// UI Manager for creating and managing interface elements
 class UIManager {
     constructor() {
         this.initialized = false;
-        this.tabContents = {};
-    }
-
-    /**
-     * Initialize all UI components
-     */
-    init() {
-        if (this.initialized) return;
-
-        this.createTabContents();
-        this.createMachineSettings();
-        this.createFileFormatButtons();
-        this.createColormapButtons();
-        this.createAdvancedMachineSettings();
-        
-        this.initialized = true;
-        console.log('تم تهيئة واجهة المستخدم');
-    }
-
-    /**
-     * Create tab content areas
-     */
-    createTabContents() {
-        const leftPanel = document.querySelector('.panel');
-        if (!leftPanel) return;
-
-        const tabContents = {
-            'original': {
-                title: '🖼️ الأصلية',
-                content: `
-                    <div class="canvas-placeholder" id="originalPlaceholder">الصورة الأصلية ستظهر هنا</div>
-                    <canvas id="canvasOriginal" style="display:none;"></canvas>
-                `
-            },
-            'heatmap': {
-                title: '🔥 Heatmap',
-                content: `
-                    <div class="canvas-placeholder" id="heatmapPlaceholder">Heatmap ستظهر هنا</div>
-                    <canvas id="canvasHeatmap" style="display:none;"></canvas>
-                `
-            },
-            'contour': {
-                title: '📐 Contours',
-                content: `
-                    <div class="canvas-placeholder" id="contourPlaceholder">Contours ستظهر هنا</div>
-                    <canvas id="canvasContour" style="display:none;"></canvas>
-                    <div class="small-meta">تبديل وضع كشف الحواف أو تحريك حساسية الحواف يحدث إعادة معالجة تلقائية</div>
-                `
-            },
-            'topview': {
-                title: '🔝 Top View',
-                content: `
-                    <div id="topViewContainer">
-                        <canvas id="topView"></canvas>
-                        <div id="topLegend" title="عمق النقش — الألوان فقط"></div>
-                    </div>
-                    <div class="small-meta">معاينة من الأعلى للعمق المتوقع بعد تنفيذ G-code (الألوان تتبع اختيار Colormap)</div>
-                `
-            },
-            'threed': {
-                title: '🧊 3D Models',
-                content: `
-                    <div class="canvas-placeholder" id="threedPlaceholder">الموديل ثلاثي الأبعاد سيظهر هنا</div>
-                    <div id="threeDContainer" style="display:none;">
-                        <canvas id="canvas3D"></canvas>
-                    </div>
-                `
-            },
-            'simulation': {
-                title: '🎬 المحاكاة',
-                content: `
-                    <div id="threeContainer">
-                        <div class="canvas-placeholder" id="simulationPlaceholder">المحاكاة ستظهر هنا بعد توليد G-code</div>
-                    </div>
-                `
-            },
-            'vector2d': {
-                title: '📐 2D Vector Preview',
-                content: `
-                    <div style="display:flex;flex-direction:column;gap:8px;">
-                        <div class="canvas-placeholder" id="vectorPlaceholder">اسحب أو ارفع ملف SVG أو DXF هنا للمعاينة</div>
-                        <canvas id="vectorCanvas" style="display:none;width:100%;height:420px;background:transparent;"></canvas>
-                        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
-                            <button id="vectorZoomIn" class="secondary">🔍+</button>
-                            <button id="vectorZoomOut" class="secondary">🔍−</button>
-                            <button id="vectorFit" class="secondary">🎯 ملء الشاشة</button>
-                        </div>
-                    </div>
-                `
-            },
-            'ai-analysis': {
-                title: '🧠 تحليل الصورة',
-                content: `
-                    <h2>🧠 تحليل الصورة المتقدم</h2>
-                    <p>تحليل شامل للسطوع، التباين، الحدة، الملمس، كثافة الحواف وتوصيات الماكينة.</p>
-                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                        <button id="runAiAnalysis" class="action-btn">بدء التحليل</button>
-                        <button id="aiApplyToMachine" class="action-btn" style="display:none">تطبيق التوصيات</button>
-                        <button id="aiCopyResult" class="action-btn" style="display:none">نسخ النتائج</button>
-                        <span id="aiStatus" style="margin-inline-start:8px;color:#9fb6c3"></span>
-                    </div>
-                    <div id="aiTableWrap" style="margin-top:12px;">
-                        <table id="aiResultTable" style="width:100%;border-collapse:collapse;text-align:right">
-                            <thead><tr style="text-align:right"><th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.04)">المؤشر</th><th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.04)">القيمة</th><th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.04)">ملاحظة</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <img id="aiPreviewImage" class="preview-img" style="display:none;margin-top:12px" alt="صورة مصغرة"/>
-                `
-            }
-        };
-
-        // Create tab buttons and contents
-        Object.entries(tabContents).forEach(([tabId, { title, content }]) => {
-            this.tabContents[tabId] = content;
-            
-            // Add to left panel
-            const contentDiv = document.createElement('div');
-            contentDiv.id = tabId;
-            contentDiv.className = 'tab-content';
-            contentDiv.innerHTML = content;
-            leftPanel.appendChild(contentDiv);
-        });
-
-        console.log('تم إنشاء محتويات التبويبات');
     }
 
     /**
      * Create machine settings panels
      */
     createMachineSettings() {
-        const rightPanel = document.querySelector('.panel');
-        if (!rightPanel) return;
+        try {
+            const rightPanel = document.querySelector('.panel:nth-child(2)');
+            if (!rightPanel) {
+                console.error('Right panel not found');
+                return;
+            }
 
-        const settingsHTML = `
-            <!-- Machine Category Selection -->
-            <label for="machineCategory">نوع الماكينة الرئيسي</label>
-            <select id="machineCategory">
-                <option value="router">CNC Router (نحت خشب)</option>
-                <option value="laser">Laser Engraver (نقش ليزر)</option>
-                <option value="threed">3D Printer (طباعة ثلاثية الأبعاد)</option>
-            </select>
+            // Remove existing machine settings if any
+            const existingSettings = rightPanel.querySelector('.machine-settings-container');
+            if (existingSettings) {
+                existingSettings.remove();
+            }
 
-            <!-- CNC Router Settings -->
-            <div id="routerSettings" class="machine-settings">
-                ${this.createRouterSettings()}
-            </div>
+            const machineSettingsHTML = `
+                <!-- Machine Category Selection -->
+                <label for="machineCategory">نوع الماكينة الرئيسي</label>
+                <select id="machineCategory">
+                    <option value="router">CNC Router (نحت خشب)</option>
+                    <option value="laser">Laser Engraver (نقش ليزر)</option>
+                    <option value="threed">3D Printer (طباعة ثلاثية الأبعاد)</option>
+                </select>
 
-            <!-- Laser Engraver Settings -->
-            <div id="laserSettings" class="machine-settings" style="display:none;">
-                ${this.createLaserSettings()}
-            </div>
+                <!-- CNC Router Settings -->
+                <div id="routerSettings" class="machine-settings">
+                    ${this.createRouterSettings()}
+                </div>
 
-            <!-- 3D Printer Settings -->
-            <div id="threedSettings" class="machine-settings" style="display:none;">
-                ${this.create3DSettings()}
-            </div>
+                <!-- Laser Engraver Settings -->
+                <div id="laserSettings" class="machine-settings" style="display:none;">
+                    ${this.createLaserSettings()}
+                </div>
 
-            <div id="estTime" style="margin-top:12px;color:#9bb0c8;text-align:center;padding:8px;background:#0f172a;border-radius:6px"></div>
+                <!-- 3D Printer Settings -->
+                <div id="threedSettings" class="machine-settings" style="display:none;">
+                    ${this.create3DSettings()}
+                </div>
 
-            <label for="gcodeOut" style="margin-top:12px">📄 مخرجات G-code</label>
-            <textarea id="gcodeOut" readonly placeholder="سيظهر G-code هنا بعد التوليد..." style="height:180px;background:#021024;color:#cfeaf2;border-radius:8px;padding:10px;"></textarea>
-        `;
+                <!-- Estimated Time -->
+                <div id="estTime" style="margin-top:12px;color:#9bb0c8;text-align:center;padding:8px;background:#0f172a;border-radius:6px"></div>
 
-        // Find the position after the advanced machine settings
-        const advMachineCard = document.getElementById('adv-machine-card');
-        if (advMachineCard) {
-            advMachineCard.insertAdjacentHTML('afterend', settingsHTML);
-        } else {
-            rightPanel.innerHTML += settingsHTML;
+                <!-- G-code Output -->
+                <label for="gcodeOut" style="margin-top:12px">📄 مخرجات G-code</label>
+                <textarea id="gcodeOut" readonly placeholder="سيظهر G-code هنا بعد التوليد..." style="height:180px;background:#021024;color:#cfeaf2;border-radius:8px;padding:10px;"></textarea>
+            `;
+
+            // Create container and insert after the h3
+            const h3 = rightPanel.querySelector('h3');
+            if (h3) {
+                const container = document.createElement('div');
+                container.className = 'machine-settings-container';
+                container.innerHTML = machineSettingsHTML;
+                h3.parentNode.insertBefore(container, h3.nextSibling);
+            } else {
+                rightPanel.insertAdjacentHTML('beforeend', machineSettingsHTML);
+            }
+
+            console.log('✅ تم إنشاء إعدادات الماكينة');
+            this.initialized = true;
+
+        } catch (error) {
+            console.error('❌ فشل إنشاء إعدادات الماكينة:', error);
+            throw error;
         }
     }
 
     /**
-     * Create router settings HTML
+     * Create CNC Router settings
      */
     createRouterSettings() {
         return `
@@ -195,7 +91,7 @@ class UIManager {
             <label for="workDepth">عمق العمل (مم)</label>
             <input id="workDepth" type="number" value="3.0" step="0.1" min="0.1" max="50"/>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="inner-grid">
                 <div>
                     <label for="originX">نقطة الأصل X (سم)</label>
                     <input id="originX" type="number" value="0" step="0.1"/>
@@ -265,7 +161,7 @@ class UIManager {
     }
 
     /**
-     * Create laser settings HTML
+     * Create Laser Engraver settings
      */
     createLaserSettings() {
         return `
@@ -279,7 +175,7 @@ class UIManager {
             <input id="laserWorkHeight" type="number" value="20" step="0.1" min="1" max="200"/>
             <div class="small-meta" id="laserHeightMm">200.0 مم</div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="inner-grid">
                 <div>
                     <label for="laserOriginX">نقطة الأصل X (سم)</label>
                     <input id="laserOriginX" type="number" value="0" step="0.1"/>
@@ -366,7 +262,7 @@ class UIManager {
     }
 
     /**
-     * Create 3D printer settings HTML
+     * Create 3D Printer settings
      */
     create3DSettings() {
         return `
@@ -387,7 +283,7 @@ class UIManager {
             <input id="threedWorkDepth" type="number" value="10" step="0.1" min="0.1" max="100"/>
             <div class="small-meta" id="threedDepthMm">10.0 مم</div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="inner-grid">
                 <div>
                     <label for="threedOriginX">نقطة الأصل X (سم)</label>
                     <input id="threedOriginX" type="number" value="0" step="0.1"/>
@@ -448,20 +344,26 @@ class UIManager {
         const fileFormatSection = document.querySelector('.file-format-buttons');
         if (!fileFormatSection) return;
 
-        const formats = [
-            { format: 'stl', label: 'STL', description: 'نموذج ثلاثي الأبعاد' },
-            { format: 'svg', label: 'SVG', description: 'رسوم متجهة' },
-            { format: 'dxf', label: 'DXF', description: 'رسم CAD' }
-        ];
-
-        fileFormatSection.innerHTML = formats.map(({ format, label, description }) => `
-            <button data-format="${format}" title="تحميل ملف ${label}">
+        fileFormatSection.innerHTML = `
+            <button data-format="stl" title="تحميل ملف STL (ثلاثي الأبعاد)">
                 <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-                    <div>${label}</div>
-                    <div style="font-size:0.8rem;color:#9bb0c8">${description}</div>
+                    <div>STL</div>
+                    <div style="font-size:0.8rem;color:#9bb0c8">نموذج ثلاثي الأبعاد</div>
                 </div>
             </button>
-        `).join('');
+            <button data-format="svg" title="تحميل ملف SVG (رسوم متجهة)">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div>SVG</div>
+                    <div style="font-size:0.8rem;color:#9bb0c8">رسوم متجهة</div>
+                </div>
+            </button>
+            <button data-format="dxf" title="تحميل ملف DXF (رسم CAD)">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div>DXF</div>
+                    <div style="font-size:0.8rem;color:#9bb0c8">رسم CAD</div>
+                </div>
+            </button>
+        `;
     }
 
     /**
@@ -471,116 +373,72 @@ class UIManager {
         const colormapButtons = document.querySelector('.colormap-buttons');
         if (!colormapButtons) return;
 
-        const colormaps = [
-            { map: 'jet', label: 'Jet', gradient: 'linear-gradient(90deg,#0000ff,#00ffff,#ffff00,#ff0000)' },
-            { map: 'hot', label: 'Hot', gradient: 'linear-gradient(90deg,#000000,#ff0000,#ffff00,#ffffff)' },
-            { map: 'cool', label: 'Cool', gradient: 'linear-gradient(90deg,#00ffff,#ff00ff)' },
-            { map: 'gray', label: 'Gray', gradient: 'linear-gradient(90deg,#000000,#ffffff)' }
-        ];
-
-        colormapButtons.innerHTML = colormaps.map(({ map, label, gradient }, index) => `
-            <button data-map="${map}" class="${index === 0 ? 'active' : ''}" title="${label} - ${map === 'jet' ? 'الأزرق إلى الأحمر' : map === 'hot' ? 'الأسود إلى الأحمر إلى الأصفر' : map === 'cool' ? 'السماوي إلى الأرجواني' : 'التدرج الرمادي'}">
+        colormapButtons.innerHTML = `
+            <button data-map="jet" class="active" title="Jet - الأزرق إلى الأحمر">
                 <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-                    <div>${label}</div>
-                    <div style="width:100%;height:4px;background:${gradient};border-radius:2px"></div>
+                    <div>Jet</div>
+                    <div style="width:100%;height:4px;background:linear-gradient(90deg,#0000ff,#00ffff,#ffff00,#ff0000);border-radius:2px"></div>
                 </div>
             </button>
-        `).join('');
-    }
-
-    /**
-     * Create advanced machine settings
-     */
-    createAdvancedMachineSettings() {
-        const advMachineCard = document.getElementById('adv-machine-body');
-        if (!advMachineCard) return;
-
-        advMachineCard.innerHTML = `
-            <div class="adv-row">
-                <label>Origin X</label><input id="adv_origin_x" class="adv-input" type="number" step="0.01" value="0">
-                <label>Origin Y</label><input id="adv_origin_y" class="adv-input" type="number" step="0.01" value="0">
-                <label>Origin Z</label><input id="adv_origin_z" class="adv-input" type="number" step="0.01" value="0">
-            </div>
-            <div class="adv-row">
-                <label>Calib X</label><input id="adv_cal_x" class="adv-slider" type="range" min="-1" max="1" step="0.01" value="0">
-                <span id="adv_cal_x_val" style="min-width:36px;text-align:center;color:#a8e9ff">0</span>
-                <label>Calib Y</label><input id="adv_cal_y" class="adv-slider" type="range" min="-1" max="1" step="0.01" value="0">
-                <span id="adv_cal_y_val" style="min-width:36px;text-align:center;color:#a8e9ff">0</span>
-            </div>
-            <div class="adv-row">
-                <label>Reverse X</label><input id="adv_rev_x" type="checkbox">
-                <label>Reverse Y</label><input id="adv_rev_y" type="checkbox">
-            </div>
-            <div class="adv-row">
-                <label>Execution</label>
-                <select id="adv_exec" class="adv-input">
-                    <option value="raster">Raster</option>
-                    <option value="contour">Contour</option>
-                </select>
-                <label>Delay (ms)</label><input id="adv_delay" class="adv-input" type="number" min="0" value="0" step="10">
-            </div>
-            <div class="adv-actions">
-                <button id="adv_reset" class="dbg-btn">إرجاع الإعدادات الافتراضية</button>
-                <div style="flex:1"></div>
-                <button id="adv_save" class="dbg-btn">حفظ</button>
-            </div>
+            <button data-map="hot" title="Hot - الأسود إلى الأحمر إلى الأصفر">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div>Hot</div>
+                    <div style="width:100%;height:4px;background:linear-gradient(90deg,#000000,#ff0000,#ffff00,#ffffff);border-radius:2px"></div>
+                </div>
+            </button>
+            <button data-map="cool" title="Cool - السماوي إلى الأرجواني">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div>Cool</div>
+                    <div style="width:100%;height:4px;background:linear-gradient(90deg,#00ffff,#ff00ff);border-radius:2px"></div>
+                </div>
+            </button>
+            <button data-map="gray" title="Gray - التدرج الرمادي">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div>Gray</div>
+                    <div style="width:100%;height:4px;background:linear-gradient(90deg,#000000,#ffffff);border-radius:2px"></div>
+                </div>
+            </button>
         `;
     }
 
     /**
-     * Update button visibility based on machine type
+     * Initialize tab behavior
      */
-    updateButtonVisibility(machineType) {
-        const isLaser = machineType === 'laser';
-        const is3D = machineType === 'threed';
-        
-        const elements = {
-            router: ['btnGen', 'btnContour', 'btnQuick', 'btnCenterOrigin', 'btnDownload'],
-            laser: ['btnLaserEngrave', 'btnLaserQuick', 'btnLaserCut', 'btnLaserDownload', 'btnRedetectLaser', 'btnLaserCenterOrigin'],
-            threed: ['btnSliceModel', 'btnPreviewLayers', 'btnDownload3D', 'btnThreedCenterOrigin']
-        };
+    initTabBehavior() {
+        try {
+            document.querySelectorAll('.tab-buttons button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove active from all buttons
+                    document.querySelectorAll('.tab-buttons button').forEach(b => {
+                        b.classList.remove('active');
+                    });
+                    
+                    // Hide all tab contents
+                    document.querySelectorAll('.tab-content').forEach(tc => {
+                        tc.classList.remove('active');
+                    });
+                    
+                    // Activate current tab
+                    btn.classList.add('active');
+                    const tabId = btn.dataset.tab;
+                    const tabContent = document.getElementById(tabId);
+                    
+                    if (tabContent) {
+                        tabContent.classList.add('active');
+                    }
 
-        // Hide all elements first
-        Object.values(elements).flat().forEach(id => {
-            const elem = document.getElementById(id);
-            if (elem) elem.style.display = 'none';
-        });
-
-        // Show appropriate elements
-        let toShow = [];
-        if (isLaser) {
-            toShow = elements.laser;
-        } else if (is3D) {
-            toShow = elements.threed;
-        } else {
-            toShow = elements.router;
-        }
-        
-        toShow.forEach(id => {
-            const elem = document.getElementById(id);
-            if (elem) elem.style.display = 'block';
-        });
-    }
-
-    /**
-     * Show loading state for a button
-     */
-    setButtonLoading(buttonId, isLoading) {
-        const button = document.getElementById(buttonId);
-        if (!button) return;
-
-        if (isLoading) {
-            button.disabled = true;
-            button.innerHTML = '⏳ جاري المعالجة...';
-        } else {
-            button.disabled = false;
-            // Reset button text based on ID
-            const buttonTexts = {
-                'btnGen': '⚡ توليد G-code (Raster)',
-                'btnLaserEngrave': '⚡ توليد كود ليزر (نقش)',
-                'btnSliceModel': '⚡ توليد G-code (3D)'
-            };
-            button.innerHTML = buttonTexts[buttonId] || button.textContent;
+                    // Special handling for simulation tab
+                    if (tabId === 'simulation' && document.getElementById('gcodeOut')?.value) {
+                        if (typeof initSimulation === 'function') {
+                            initSimulation();
+                        }
+                    }
+                });
+            });
+            
+            console.log('✅ تم تهيئة سلوك التبويبات');
+        } catch (error) {
+            console.error('❌ فشل تهيئة سلوك التبويبات:', error);
         }
     }
 }
