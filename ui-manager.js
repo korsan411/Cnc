@@ -261,6 +261,67 @@ class UIManager {
         `;
     }
 
+/**
+ * Create tab contents dynamically
+ */
+createTabContents() {
+    try {
+        const leftPanel = document.querySelector('.panel');
+        if (!leftPanel) {
+            console.error('❌ Left panel not found');
+            return;
+        }
+
+        const tabContents = {
+            'original': `
+                <div class="tab-content active" id="original">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0;">الصورة الأصلية</h4>
+                        <button id="btnClearImage" class="secondary" style="display:none;">🗑️ مسح الصورة</button>
+                    </div>
+                    <div class="canvas-placeholder" id="originalPlaceholder">
+                        <div style="text-align:center;">
+                            <div style="font-size:2rem; margin-bottom:10px;">🖼️</div>
+                            <div>اسحب وأفلت صورة هنا أو انقر "اختر صورة"</div>
+                            <div style="font-size:0.8rem; color:#9bb0c8; margin-top:8px;">
+                                يدعم: JPEG, PNG, GIF, BMP, WebP
+                            </div>
+                        </div>
+                    </div>
+                    <canvas id="canvasOriginal" style="display:none; width:100%; border-radius:8px;"></canvas>
+                </div>
+            `,
+            // ... باقي التبويبات تبقى كما هي
+        };
+
+        // Add tab contents to left panel
+        Object.values(tabContents).forEach(content => {
+            leftPanel.insertAdjacentHTML('beforeend', content);
+        });
+
+        // Add event listener for clear image button
+        setTimeout(() => {
+            const clearBtn = document.getElementById('btnClearImage');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    if (typeof clearImage === 'function') {
+                        clearImage();
+                        clearBtn.style.display = 'none';
+                    }
+                });
+            }
+        }, 100);
+
+        console.log('✅ تم إنشاء محتويات التبويبات');
+    } catch (error) {
+        console.error('❌ فشل إنشاء محتويات التبويبات:', error);
+    }
+}
+
+
+
+    
+
     /**
      * Create 3D Printer settings
      */
