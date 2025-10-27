@@ -1,23 +1,18 @@
-/**
- * Memory Manager for OpenCV Mat objects
- * Prevents memory leaks and manages OpenCV resources
- */
+// Memory Manager for OpenCV Mat cleanup
 class MemoryManager {
     constructor() {
         this.mats = new Set();
         this.maxMats = 15;
-        this.totalAllocated = 0;
-        this.totalFreed = 0;
+        this.cleanupInterval = null;
     }
 
     /**
-     * Track a Mat object for automatic cleanup
+     * Track a matrix for automatic cleanup
      */
-    track(mat, name = 'unnamed') {
+    track(mat, name = 'mat') {
         try {
             if (mat && !this.isMatDeleted(mat)) {
-                this.mats.add({ mat, name, created: Date.now() });
-                this.totalAllocated++;
+                this.mats.add({ mat, name, timestamp: Date.now() });
                 
                 // Cleanup if we exceed the limit
                 if (this.mats.size > this.maxMats) {
@@ -25,23 +20,23 @@ class MemoryManager {
                 }
             }
         } catch (error) {
-            console.warn('فشل في تتبع المصفوفة:', error);
+            console.warn('Failed to track matrix:', error);
         }
     }
 
     /**
-     * Check if a Mat is already deleted
+     * Check if matrix is already deleted
      */
     isMatDeleted(mat) {
         try {
-            return !mat || typeof mat.delete !== 'function' || mat.isDeleted;
+            return !mat || typeof mat.delete !== 'function';
         } catch {
             return true;
         }
     }
 
     /**
-     * Safely delete a Mat object
+     * Safely delete a matrix
      */
     safeDelete(mat, name = 'mat') {
         try {
@@ -49,7 +44,6 @@ class MemoryManager {
                 if (!mat.isDeleted) {
                     mat.delete();
                     mat.isDeleted = true;
-                    this.totalFreed++;
                     console.log(`🧹 تم حذف ${name} بأمان`);
                 }
             }
@@ -59,103 +53,108 @@ class MemoryManager {
     }
 
     /**
-     * Cleanup oldest Mat object
+     * Cleanup oldest matrices
      */
     cleanupOldest() {
         try {
-            if (this.mats.size > 0) {
-                const oldest = Array.from(this.mats).reduce((oldest, current) => {
-                    return current.created < oldest.created ? current : oldest;
-                });
-                
-                this.safeDelete(oldest.mat, oldest.name);
-                this.mats.delete(oldest);
+            if (this.mats.size === 0) return;
+
+            // Convert to array and sort by timestamp
+            const matsArray = Array.from(this.mats);
+            matsArray.sort((a, b) => a.timestamp - b.timestamp);
+
+            // Remove oldest 20%
+            const removeCount = Math.max(1, Math.floor(this.mats.size * 0.2));
+            
+            for (let i = 0; i < removeCount; i++) {
+                const oldest = matsArray[i];
+                if (oldest) {
+                    this.safeDelete(oldest.mat, oldest.name);
+                    this.mats.delete(oldest);
+                }
             }
         } catch (error) {
-            console.warn('فشل في تنظيف أقدم مصفوفة:', error);
+            console.warn('Failed to cleanup oldest matrices:', error);
         }
     }
 
     /**
-     * Cleanup all tracked Mat objects
+     * Cleanup all tracked matrices
      */
     cleanupAll() {
         try {
-            this.mats.forEach(({ mat, name }) => {
-                this.safeDelete(mat, name);
+            console.log(`🧹 تنظيف ${this.mats.size} مصفوفة...`);
+            
+            this.mats.forEach(item => {
+                this.safeDelete(item.mat, item.name);
             });
+            
             this.mats.clear();
+            console.log('✅ تم تنظيف جميع المصفوفات');
         } catch (error) {
-            console.warn('فشل في التنظيف الكامل:', error);
+            console.warn('Failed to cleanup all matrices:', error);
         }
     }
 
     /**
-     * Cleanup specific Mats used in image processing
+     * Cleanup specific matrices used in image processing
      */
-    cleanupMats() {
+    cleanupImageProcessing() {
         try {
-            if (APP_STATE.grayMat && !this.isMatDeleted(APP_STATE.grayMat)) { 
+            // Clean grayMat
+            if (APP_STATE.grayMat && !this.isMatDeleted(APP_STATE.grayMat)) {
                 this.safeDelete(APP_STATE.grayMat, 'grayMat');
-                APP_STATE.grayMat = null; 
+                APP_STATE.grayMat = null;
             }
-        } catch (error) { 
-            console.warn('فشل في تنظيف grayMat:', error); 
-        }
-        
-        try {
+            
+            // Clean contour
             if (APP_STATE.contour && !this.isMatDeleted(APP_STATE.contour)) {
                 this.safeDelete(APP_STATE.contour, 'contour');
                 APP_STATE.contour = null;
             }
-        } catch (error) { 
-            console.warn('فشل في تنظيف contour:', error); 
-        }
-        
-        try {
+            
+            // Clean additional contours
             APP_STATE.additionalContours.forEach(item => {
                 if (item && item.contour && !this.isMatDeleted(item.contour)) {
                     this.safeDelete(item.contour, 'additionalContour');
                 }
             });
             APP_STATE.additionalContours = [];
-        } catch (error) { 
-            console.warn('فشل في تنظيف additionalContours:', error); 
+        } catch (error) {
+            console.warn('Failed to cleanup image processing matrices:', error);
         }
     }
 
     /**
      * Get memory usage statistics
      */
-    getMemoryUsage() {
+    getMemoryStats() {
         return {
-            trackedMats: this.mats.size,
-            totalAllocated: this.totalAllocated,
-            totalFreed: this.totalFreed,
-            activeMats: this.totalAllocated - this.totalFreed
+            totalTracked: this.mats.size,
+            maxAllowed: this.maxMats
         };
     }
 
     /**
-     * Log memory usage
+     * Start automatic cleanup interval
      */
-    logMemoryUsage() {
-        const usage = this.getMemoryUsage();
-        console.log(`🧠 استخدام الذاكرة: ${usage.trackedMats} مصفوفة نشطة, ${usage.activeMats} إجمالي النشطة`);
+    startAutoCleanup(intervalMs = 30000) {
+        this.stopAutoCleanup();
+        
+        this.cleanupInterval = setInterval(() => {
+            if (this.mats.size > this.maxMats * 0.8) {
+                this.cleanupOldest();
+            }
+        }, intervalMs);
     }
 
     /**
-     * Force garbage collection (where supported)
+     * Stop automatic cleanup
      */
-    forceGarbageCollection() {
-        try {
-            if (global.gc) {
-                global.gc();
-            } else if (window.gc) {
-                window.gc();
-            }
-        } catch (e) {
-            // GC not available
+    stopAutoCleanup() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
         }
     }
 }
@@ -163,26 +162,10 @@ class MemoryManager {
 // Create global instance
 const memoryManager = new MemoryManager();
 
-// Safe delete helper function
-function safeDelete(mat) {
-    memoryManager.safeDelete(mat);
-}
+// Start auto cleanup
+memoryManager.startAutoCleanup();
 
-// Patch cv.Mat.prototype.delete for automatic tracking
-(function() {
-    try {
-        if (typeof cv !== 'undefined' && cv && cv.Mat && cv.Mat.prototype && !cv.Mat.prototype.__safePatched) {
-            const originalDelete = cv.Mat.prototype.delete;
-            cv.Mat.prototype.delete = function() {
-                try {
-                    if (!this.isDeleted) {
-                        originalDelete.call(this);
-                        this.isDeleted = true;
-                    }
-                } catch (error) {
-                    console.warn('فشل في حذف المصفوفة:', error);
-                }
-            };
-            cv.Mat.prototype.__safePatched = true;
-        }
-    } catch (error) {
+// Export for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { MemoryManager, memoryManager };
+}
