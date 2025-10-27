@@ -408,5 +408,29 @@ if (typeof cv === 'undefined') {
     }, 1000);
 }
 </script>
+
+<script>
+// Safe initialization after all scripts are loaded
+window.addEventListener('load', function() {
+    console.log('🎯 All resources loaded, starting app...');
+    
+    // Initialize utilities first
+    if (typeof initUtils === 'function') {
+        setTimeout(initUtils, 100);
+    }
+    
+    // Initialize OpenCV
+    if (typeof openCVHandler !== 'undefined') {
+        setTimeout(() => openCVHandler.initOpenCV(), 2000);
+    }
+    
+    console.log('🚀 App initialization started');
+});
+</script>
+
+
+
+
+  
 </body>
 </html>
