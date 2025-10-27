@@ -263,43 +263,50 @@ showImagePreview() {
             });
         }
     }
-
-    /**
-     * Process image for edge detection
-     */
-    async processImageForDetection() {
-        if (!APP_STATE.previewCanvas) {
-            console.log('⚠️ No preview canvas available for processing');
-            return;
-        }
-
-        // Check if OpenCV is ready
-        if (typeof openCVHandler === 'undefined' || !openCVHandler.isReady) {
-            console.log('⏳ OpenCV not ready, skipping image processing');
-            return;
-        }
-
-        try {
-            console.log('🔍 Processing image for edge detection...');
-            
-            // Get current machine type
-            const machineType = document.getElementById('machineCategory')?.value || 'router';
-            
-            // Process based on machine type
-            if (machineType === 'laser') {
-                if (typeof detectLaserContours === 'function') {
-                    await detectLaserContours();
-                }
-            } else {
-                if (typeof detectContours === 'function') {
-                    await detectContours();
-                }
-            }
-
-        } catch (error) {
-            console.error('❌ Failed to process image:', error);
-        }
+/**
+ * Process image for edge detection
+ */
+async processImageForDetection() {
+    if (!APP_STATE.previewCanvas) {
+        console.log('⚠️ No preview canvas available for processing');
+        return;
     }
+
+    // Wait a bit for UI to update
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Check if OpenCV is ready
+    if (typeof openCVHandler === 'undefined' || !openCVHandler.isReady) {
+        console.log('⏳ OpenCV not ready, skipping image processing');
+        showToast('OpenCV جاري التحميل... سيبدأ كشف الحواف تلقائياً عند الجاهزية');
+        return;
+    }
+
+    try {
+        console.log('🔍 Processing image for edge detection...');
+        
+        // Get current machine type
+        const machineType = document.getElementById('machineCategory')?.value || 'router';
+        
+        // Process based on machine type
+        if (machineType === 'laser') {
+            if (typeof detectLaserContours === 'function') {
+                await detectLaserContours();
+            } else {
+                console.error('❌ detectLaserContours function not available');
+            }
+        } else {
+            if (typeof detectContours === 'function') {
+                await detectContours();
+            } else {
+                console.error('❌ detectContours function not available');
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Failed to process image:', error);
+    }
+}
 
     /**
      * Get current preview canvas
