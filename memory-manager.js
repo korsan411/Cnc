@@ -1,32 +1,27 @@
-// Memory Manager for OpenCV Mat cleanup
+// Memory Manager for OpenCV - FIXED VERSION
+console.log('🔧 Loading memory-manager.js...');
+
 class MemoryManager {
     constructor() {
         this.mats = new Set();
         this.maxMats = 15;
         this.cleanupInterval = null;
+        this.startAutoCleanup();
     }
 
-    /**
-     * Track a matrix for automatic cleanup
-     */
     track(mat, name = 'mat') {
         try {
             if (mat && !this.isMatDeleted(mat)) {
                 this.mats.add({ mat, name, timestamp: Date.now() });
-                
-                // Cleanup if we exceed the limit
                 if (this.mats.size > this.maxMats) {
                     this.cleanupOldest();
                 }
             }
         } catch (error) {
-            console.warn('Failed to track matrix:', error);
+            console.warn('Track error:', error);
         }
     }
 
-    /**
-     * Check if matrix is already deleted
-     */
     isMatDeleted(mat) {
         try {
             return !mat || typeof mat.delete !== 'function';
@@ -35,37 +30,24 @@ class MemoryManager {
         }
     }
 
-    /**
-     * Safely delete a matrix
-     */
     safeDelete(mat, name = 'mat') {
         try {
-            if (mat && typeof mat.delete === 'function') {
-                if (!mat.isDeleted) {
-                    mat.delete();
-                    mat.isDeleted = true;
-                    console.log(`🧹 تم حذف ${name} بأمان`);
-                }
+            if (mat && typeof mat.delete === 'function' && !mat.isDeleted) {
+                mat.delete();
+                mat.isDeleted = true;
             }
         } catch (error) {
-            console.warn(`⚠️ فشل في حذف المصفوفة (${name}):`, error);
+            console.warn('Delete error:', error);
         }
     }
 
-    /**
-     * Cleanup oldest matrices
-     */
     cleanupOldest() {
         try {
             if (this.mats.size === 0) return;
-
-            // Convert to array and sort by timestamp
             const matsArray = Array.from(this.mats);
             matsArray.sort((a, b) => a.timestamp - b.timestamp);
-
-            // Remove oldest 20%
-            const removeCount = Math.max(1, Math.floor(this.mats.size * 0.2));
             
+            const removeCount = Math.max(1, Math.floor(this.mats.size * 0.2));
             for (let i = 0; i < removeCount; i++) {
                 const oldest = matsArray[i];
                 if (oldest) {
@@ -74,73 +56,21 @@ class MemoryManager {
                 }
             }
         } catch (error) {
-            console.warn('Failed to cleanup oldest matrices:', error);
+            console.warn('Cleanup error:', error);
         }
     }
 
-    /**
-     * Cleanup all tracked matrices
-     */
     cleanupAll() {
         try {
-            console.log(`🧹 تنظيف ${this.mats.size} مصفوفة...`);
-            
-            this.mats.forEach(item => {
-                this.safeDelete(item.mat, item.name);
-            });
-            
+            this.mats.forEach(item => this.safeDelete(item.mat, item.name));
             this.mats.clear();
-            console.log('✅ تم تنظيف جميع المصفوفات');
         } catch (error) {
-            console.warn('Failed to cleanup all matrices:', error);
+            console.warn('Cleanup all error:', error);
         }
     }
 
-    /**
-     * Cleanup specific matrices used in image processing
-     */
-    cleanupImageProcessing() {
-        try {
-            // Clean grayMat
-            if (APP_STATE.grayMat && !this.isMatDeleted(APP_STATE.grayMat)) {
-                this.safeDelete(APP_STATE.grayMat, 'grayMat');
-                APP_STATE.grayMat = null;
-            }
-            
-            // Clean contour
-            if (APP_STATE.contour && !this.isMatDeleted(APP_STATE.contour)) {
-                this.safeDelete(APP_STATE.contour, 'contour');
-                APP_STATE.contour = null;
-            }
-            
-            // Clean additional contours
-            APP_STATE.additionalContours.forEach(item => {
-                if (item && item.contour && !this.isMatDeleted(item.contour)) {
-                    this.safeDelete(item.contour, 'additionalContour');
-                }
-            });
-            APP_STATE.additionalContours = [];
-        } catch (error) {
-            console.warn('Failed to cleanup image processing matrices:', error);
-        }
-    }
-
-    /**
-     * Get memory usage statistics
-     */
-    getMemoryStats() {
-        return {
-            totalTracked: this.mats.size,
-            maxAllowed: this.maxMats
-        };
-    }
-
-    /**
-     * Start automatic cleanup interval
-     */
     startAutoCleanup(intervalMs = 30000) {
         this.stopAutoCleanup();
-        
         this.cleanupInterval = setInterval(() => {
             if (this.mats.size > this.maxMats * 0.8) {
                 this.cleanupOldest();
@@ -148,9 +78,6 @@ class MemoryManager {
         }, intervalMs);
     }
 
-    /**
-     * Stop automatic cleanup
-     */
     stopAutoCleanup() {
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
@@ -159,13 +86,9 @@ class MemoryManager {
     }
 }
 
-// Create global instance
-const memoryManager = new MemoryManager();
-
-// Start auto cleanup
-memoryManager.startAutoCleanup();
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { MemoryManager, memoryManager };
+// Create global instance safely
+if (typeof window.memoryManager === 'undefined') {
+    window.memoryManager = new MemoryManager();
 }
+
+console.log('✅ memory-manager.js loaded successfully');
