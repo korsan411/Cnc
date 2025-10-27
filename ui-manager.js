@@ -450,3 +450,98 @@ const uiManager = new UIManager();
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { UIManager, uiManager };
 }
+/**
+ * Initialize 3D file handling
+ */
+init3DFileHandling() {
+    try {
+        // 3D file input
+        const threedFileInput = document.getElementById('threedFileInput');
+        if (threedFileInput) {
+            threedFileInput.addEventListener('change', (e) => {
+                this.handle3DFileSelect(e);
+            });
+        }
+
+        // File format buttons for 3D
+        const stlButton = document.querySelector('[data-format="stl"]');
+        const objButton = document.querySelector('[data-format="obj"]');
+        
+        if (stlButton) {
+            stlButton.addEventListener('click', () => {
+                this.open3DFileDialog('stl');
+            });
+        }
+        
+        if (objButton) {
+            objButton.addEventListener('click', () => {
+                this.open3DFileDialog('obj');
+            });
+        }
+
+        console.log('✅ 3D file handling initialized');
+    } catch (error) {
+        console.error('❌ Failed to initialize 3D file handling:', error);
+    }
+}
+
+/**
+ * Handle 3D file selection
+ */
+handle3DFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    
+    try {
+        if (fileName.endsWith('.stl')) {
+            if (typeof loadSTLModel === 'function') {
+                loadSTLModel(file).catch(error => {
+                    console.error('Failed to load STL:', error);
+                    showToast('فشل تحميل ملف STL: ' + error.message, 4000);
+                });
+            } else {
+                showToast('وظيفة تحميل STL غير متاحة', 3000);
+            }
+        } else if (fileName.endsWith('.obj')) {
+            if (typeof loadOBJModel === 'function') {
+                loadOBJModel(file).catch(error => {
+                    console.error('Failed to load OBJ:', error);
+                    showToast('فشل تحميل ملف OBJ: ' + error.message, 4000);
+                });
+            } else {
+                showToast('وظيفة تحميل OBJ غير متاحة', 3000);
+            }
+        } else {
+            showToast('نوع الملف غير مدعوم. استخدم STL أو OBJ', 3000);
+        }
+    } catch (error) {
+        console.error('Error handling 3D file:', error);
+        showToast('خطأ في معالجة الملف', 3000);
+    }
+}
+
+/**
+ * Open 3D file dialog
+ */
+open3DFileDialog(format) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = format === 'stl' ? '.stl' : '.obj';
+    
+    input.onchange = (e) => {
+        this.handle3DFileSelect(e);
+    };
+    
+    input.click();
+}
+
+
+
+
+
+
+
+
+
