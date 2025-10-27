@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC AI - النسخة الشاملة</title>
+    
+    <!-- مكتبات -->
+    <script src="https://docs.opencv.org/4.8.0/opencv.js" async></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        /* كل الأنماط في مكان واحد */
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: linear-gradient(135deg, #041022 0%, #0a1a35 100%);
+            color: #e6eef6; 
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        
+        .app { 
+            max-width: 1400px; 
+            margin: 16px auto; 
+            padding: 16px;
+        }
+        
+        header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+            background: rgba(11, 19, 32, 0.8);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .grid { 
+            display: grid; 
+            grid-template-columns: 1fr 520px; 
+            gap: 20px;
+        }
+        
+        .panel { 
+            background: rgba(11, 19, 32, 0.8); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(30, 41, 59, 0.5);
+        }
+        
+        @media (max-width: 1100px){ 
+            .grid{ grid-template-columns: 1fr; } 
+        }
+        
+        .tab-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            background: rgba(14,23,33,0.8);
+            padding: 10px;
+            border-radius: 12px;
+        }
+        
+        .tab-buttons button { 
+            border: none; 
+            padding: 10px 12px; 
+            border-radius: 8px; 
+            background: transparent; 
+            color: #9bb0c8; 
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-buttons button.active { 
+            background: linear-gradient(135deg, #06b6d4, #3b82f6); 
+            color: #fff; 
+        }
+        
+        .tab-content { display: none; margin-top: 16px; }
+        .tab-content.active { display: block; }
+        
+        .canvas-placeholder { 
+            width: 100%; 
+            min-height:220px; 
+            background: rgba(0, 0, 0, 0.3); 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: #9bb0c8; 
+            border: 1px dashed rgba(51, 65, 85, 0.5);
+        }
+        
+        canvas { 
+            max-width: 100%; 
+            border-radius: 8px; 
+            background: #000; 
+            display: block; 
+            margin: 0 auto; 
+        }
+        
+        label { display: block; margin-top: 16px; color: #cfeaf2; }
+        input, select, textarea, button { 
+            width: 100%; 
+            padding: 10px 12px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(30, 41, 59, 0.5); 
+            background: rgba(15, 23, 42, 0.7); 
+            color: #e6eef6; 
+            margin-top: 6px;
+        }
+        
+        button { 
+            background: rgba(30, 41, 59, 0.8); 
+            color: #e6eef6; 
+            border: none; 
+            padding: 12px 16px; 
+            border-radius: 8px; 
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        button.primary { 
+            background: linear-gradient(135deg, #06b6d4, #3b82f6); 
+            color: #fff; 
+        }
+        
+        #toast { 
+            position: fixed; 
+            right: 20px; 
+            bottom: 20px; 
+            background: rgba(0, 0, 0, 0.9); 
+            color: #fff; 
+            padding: 12px 16px; 
+            border-radius: 10px; 
+            display: none; 
+            z-index: 10000;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(243, 243, 243, 0.3);
+            border-top: 3px solid #06b6d4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+        
+        @keyframes spin { 
+            0% { transform: rotate(0); } 
+            100% { transform: rotate(360deg); } 
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>CNC AI — النسخة الشاملة</h1>
+            <div id="cvState">
+                <span class="loading"></span>
+                جاري تحميل OpenCV...
+            </div>
+        </header>
+
+        <div class="grid">
+            <div class="panel">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:15px;">
+                    <input id="fileInput" type="file" accept="image/*" style="display:none"/>
+                    <button onclick="document.getElementById('fileInput').click()" class="primary">
+                        📁 اختر صورة
+                    </button>
+                    <select id="edgeMode" style="width:150px">
+                        <option value="auto">Canny (عادي)</option>
+                        <option value="sobel">Sobel (دقيق)</option>
+                    </select>
+                </div>
+
+                <div class="tab-buttons">
+                    <button data-tab="original" class="active">🖼️ الأصلية</button>
+                    <button data-tab="heatmap">🔥 Heatmap</button>
+                    <button data-tab="contour">📐 Contours</button>
+                </div>
+
+                <div id="original" class="tab-content active">
+                    <div class="canvas-placeholder" id="originalPlaceholder">الصورة الأصلية ستظهر هنا</div>
+                    <canvas id="canvasOriginal" style="display:none;"></canvas>
+                </div>
+
+                <div id="heatmap" class="tab-content">
+                    <div class="canvas-placeholder" id="heatmapPlaceholder">Heatmap ستظهر هنا</div>
+                    <canvas id="canvasHeatmap" style="display:none;"></canvas>
+                </div>
+
+                <div id="contour" class="tab-content">
+                    <div class="canvas-placeholder" id="contourPlaceholder">Contours ستظهر هنا</div>
+                    <canvas id="canvasContour" style="display:none;"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>⚙️ إعدادات الراوتر</h3>
+                
+                <label for="workWidth">عرض العمل (سم)</label>
+                <input id="workWidth" type="number" value="30">
+                
+                <label for="workHeight">ارتفاع العمل (سم)</label>
+                <input id="workHeight" type="number" value="20">
+                
+                <label for="feedRate">سرعة التغذية (مم/دقيقة)</label>
+                <input id="feedRate" type="number" value="800">
+                
+                <button id="btnGen" class="primary">⚡ توليد G-code</button>
+                <button id="btnDownload" class="secondary">💾 تحميل G-code</button>
+                
+                <label for="gcodeOut" style="margin-top:20px">📄 مخرجات G-code</label>
+                <textarea id="gcodeOut" readonly placeholder="سيظهر G-code هنا..." style="height:200px;margin-top:10px;"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        // ========== التهيئة الأساسية ==========
+        console.log('🚀 بدء تشغيل CNC AI...');
+        
+        // المتغيرات العامة
+        let cvReady = false;
+        let grayMat = null;
+        let previewCanvas = null;
+        
+        // ========== الدوال الأساسية ==========
+        function showToast(msg, ms = 3000) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', ms);
+            console.log('Toast: ' + msg);
+        }
+        
+        function showElement(elementId, hidePlaceholderId) {
+            document.getElementById(elementId).style.display = 'block';
+            document.getElementById(hidePlaceholderId).style.display = 'none';
+        }
+        
+        function cmToMm(cm) { return parseFloat(cm) * 10; }
+        
+        // ========== إدارة التبويبات ==========
+        document.querySelectorAll('.tab-buttons button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-buttons button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // ========== تحميل الصور ==========
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const img = new Image();
+            const imgUrl = URL.createObjectURL(file);
+            
+            img.onload = function() {
+                const canvas = document.getElementById('canvasOriginal');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                showElement('canvasOriginal', 'originalPlaceholder');
+                previewCanvas = canvas;
+                
+                URL.revokeObjectURL(imgUrl);
+                showToast('تم تحميل الصورة بنجاح!');
+                
+                // معالجة الصورة إذا كان OpenCV جاهز
+                if (cvReady) {
+                    processImage();
+                }
+            };
+            
+            img.src = imgUrl;
+        });
+        
+        // ========== معالجة OpenCV ==========
+        function processImage() {
+            if (!previewCanvas || !cvReady) return;
+            
+            try {
+                // قراءة الصورة إلى OpenCV
+                const src = cv.imread(previewCanvas);
+                const gray = new cv.Mat();
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                
+                // حفظ للمعالجة اللاحقة
+                grayMat = gray;
+                
+                // عرض Heatmap
+                displayHeatmap(gray);
+                
+                // تنظيف الذاكرة
+                src.delete();
+                
+                showToast('تم معالجة الصورة باستخدام OpenCV');
+                
+            } catch (error) {
+                console.error('خطأ في معالجة الصورة:', error);
+                showToast('خطأ في معالجة الصورة');
+            }
+        }
+        
+        function displayHeatmap(grayMat) {
+            const heatCanvas = document.getElementById('canvasHeatmap');
+            const ctx = heatCanvas.getContext('2d');
+            
+            heatCanvas.width = grayMat.cols;
+            heatCanvas.height = grayMat.rows;
+            
+            const imgData = ctx.createImageData(heatCanvas.width, heatCanvas.height);
+            const data = grayMat.data;
+            
+            for (let i = 0; i < data.length; i++) {
+                const value = data[i];
+                const idx = i * 4;
+                
+                // تدرج ألوان بسيط
+                imgData.data[idx] = value;         // R
+                imgData.data[idx + 1] = 128;       // G
+                imgData.data[idx + 2] = 255 - value; // B
+                imgData.data[idx + 3] = 255;       // A
+            }
+            
+            ctx.putImageData(imgData, 0, 0);
+            showElement('canvasHeatmap', 'heatmapPlaceholder');
+        }
+        
+        // ========== توليد G-code ==========
+        document.getElementById('btnGen').addEventListener('click', function() {
+            if (!previewCanvas) {
+                showToast('يجب تحميل صورة أولاً');
+                return;
+            }
+            
+            const workWidth = cmToMm(parseFloat(document.getElementById('workWidth').value) || 30);
+            const workHeight = cmToMm(parseFloat(document.getElementById('workHeight').value) || 20);
+            const feedRate = parseFloat(document.getElementById('feedRate').value) || 800;
+            
+            // G-code أساسي
+            const gcode = [
+                '; CNC AI Generated G-code',
+                'G21 G90 G17',
+                `G0 Z5 F${feedRate}`,
+                `G0 X0 Y0`,
+                'G1 Z0 F300',
+                `G1 X${workWidth} Y0 F${feedRate}`,
+                `G1 X${workWidth} Y${workHeight}`,
+                `G1 X0 Y${workHeight}`,
+                'G1 X0 Y0',
+                'G0 Z5',
+                'M30'
+            ].join('\n');
+            
+            document.getElementById('gcodeOut').value = gcode;
+            showToast('تم توليد G-code بنجاح!');
+        });
+        
+        document.getElementById('btnDownload').addEventListener('click', function() {
+            const gcode = document.getElementById('gcodeOut').value;
+            if (!gcode) {
+                showToast('لا يوجد G-code لتحميله');
+                return;
+            }
+            
+            const blob = new Blob([gcode], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cnc_output.gcode';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('تم تحميل الملف');
+        });
+        
+        // ========== انتظار OpenCV ==========
+        function waitForOpenCV() {
+            const checkCV = setInterval(() => {
+                if (typeof cv !== 'undefined' && cv.Mat) {
+                    clearInterval(checkCV);
+                    cvReady = true;
+                    document.getElementById('cvState').innerHTML = '✅ OpenCV جاهز';
+                    showToast('OpenCV جاهز للاستخدام!');
+                    
+                    // معالجة الصورة إذا كانت محملة
+                    if (previewCanvas) {
+                        processImage();
+                    }
+                }
+            }, 1000);
+            
+            // وقت انتظار أقصى 30 ثانية
+            setTimeout(() => {
+                if (!cvReady) {
+                    clearInterval(checkCV);
+                    document.getElementById('cvState').innerHTML = '❌ فشل تحميل OpenCV';
+                    showToast('فشل تحميل OpenCV - تأكد من الاتصال بالإنترنت', 5000);
+                }
+            }, 30000);
+        }
+        
+        // ========== بدء التطبيق ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            showToast('تم تحميل التطبيق بنجاح!');
+            waitForOpenCV();
+            
+            // إضافة CSS للتحميل
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+                .secondary { background: rgba(51, 65, 85, 0.8); }
+                .secondary:hover { background: rgba(71, 85, 105, 0.8); }
+            `;
+            document.head.appendChild(style);
+        });
+        
+        // التعامل مع أخطاء OpenCV
+        window.addEventListener('error', function(e) {
+            if (e.filename && e.filename.includes('opencv.js')) {
+                document.getElementById('cvState').innerHTML = '❌ فشل تحميل OpenCV';
+                showToast('فشل تحميل OpenCV', 5000);
+            }
+        });
+        
+        console.log('✅ تم تحميل التطبيق الأساسي');
+    </script>
+</body>
+</html>
