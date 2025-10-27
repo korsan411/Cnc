@@ -394,6 +394,16 @@ setTimeout(() => {
 }, 5000);
 </script>
 
-  
+  <script>
+// Fallback OpenCV initialization
+if (typeof cv === 'undefined') {
+    console.log('OpenCV not loaded, initializing...');
+    setTimeout(() => {
+        if (typeof openCVHandler !== 'undefined') {
+            openCVHandler.initOpenCV();
+        }
+    }, 1000);
+}
+</script>
 </body>
 </html>
