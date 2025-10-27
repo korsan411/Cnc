@@ -226,6 +226,36 @@ class CNCApp {
         console.log('✅ Advanced Machine initialized (stub)');
     }
 }
+/**
+ * Initialize event listeners
+ */
+initEventListeners() {
+    try {
+        console.log('🎧 Initializing event listeners...');
+        
+        // Initialize file input
+        if (typeof initFileInput === 'function') {
+            initFileInput();
+        } else {
+            console.error('❌ initFileInput function not available');
+        }
+        
+        if (typeof uiManager !== 'undefined' && typeof uiManager.initTabBehavior === 'function') {
+            uiManager.initTabBehavior();
+        }
+        
+        if (typeof uiManager !== 'undefined' && typeof uiManager.initControlElements === 'function') {
+            uiManager.initControlElements();
+        }
+        
+        console.log('✅ تم تهيئة مستمعي الأحداث');
+    } catch (error) {
+        console.error('❌ فشل تهيئة مستمعي الأحداث:', error);
+    }
+}
+
+
+
 
 // Create global app instance
 const cncApp = new CNCApp();
