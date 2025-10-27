@@ -52,33 +52,32 @@ class CNCApp {
         // 4. Wait for OpenCV (if needed later)
         await this.waitForOpenCVIfNeeded();
     }
-
-    /**
-     * Initialize UI components
-     */
-    initUI() {
-        try {
-            // Create tab contents
-            this.createTabContents();
-            
-            // Create machine settings
-            this.createMachineSettings();
-            
-            // Create file format buttons
-            this.createFileFormatButtons();
-            
-            // Create colormap buttons
-            this.createColormapButtons();
-            
-            // Update displays
-            updateDimensionDisplay();
-            
-            console.log('✅ تم تهيئة واجهة المستخدم');
-        } catch (error) {
-            console.error('❌ فشل تهيئة واجهة المستخدم:', error);
-            throw error;
-        }
+/**
+ * Initialize UI components
+ */
+initUI() {
+    try {
+        // Create tab contents
+        this.createTabContents();
+        
+        // Create machine settings using UIManager
+        uiManager.createMachineSettings();
+        
+        // Create file format buttons
+        uiManager.createFileFormatButtons();
+        
+        // Create colormap buttons
+        uiManager.createColormapButtons();
+        
+        // Update displays
+        updateDimensionDisplay();
+        
+        console.log('✅ تم تهيئة واجهة المستخدم');
+    } catch (error) {
+        console.error('❌ فشل تهيئة واجهة المستخدم:', error);
+        throw error;
     }
+}
 
     /**
      * Initialize OpenCV asynchronously
